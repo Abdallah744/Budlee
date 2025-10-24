@@ -1,0 +1,163 @@
+import 'dart:io';
+
+import 'package:budlee_app/config/cubit/register/register_states.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:image_picker/image_picker.dart';
+
+import '../../../models/users/user_model.dart';
+
+class RegisterCubit extends Cubit<RegisterStates> {
+  RegisterCubit() : super(InitRegisterState());
+  static RegisterCubit get(context) => BlocProvider.of(context);
+
+  final ImagePicker imagePicker = ImagePicker();
+  var emailController = TextEditingController();
+  var passwordController = TextEditingController();
+  var birthdayController = TextEditingController();
+  var passwordConfirmedController = TextEditingController();
+  var phonController = TextEditingController();
+  var avatarController = TextEditingController();
+  var genderController = TextEditingController();
+  var nameController = TextEditingController();
+  var registerFormKey = GlobalKey<FormState>();
+  var value = TextEditingController();
+  var rightsChecked = false;
+  var termsChecked = false;
+  var redEye = false;
+  bool visibleOff = true;
+  bool visibleOff2 = true;
+  var redEyeChecked = false;
+  Icon redEyeIcon = Icon(Icons.visibility_off);
+  Icon redEyeIcon2 = Icon(Icons.visibility_off);
+
+  void changeVisibilityOne() {
+    visibleOff = !visibleOff;
+    redEye = !redEye;
+    if (redEye) {
+      redEyeIcon = Icon(Icons.visibility);
+    } else {
+      redEyeIcon = Icon(Icons.visibility_off);
+    }
+    emit(RegisterChangeVisibilityState());
+  }
+
+  void changeVisibilityTwo() {
+    visibleOff2 = !visibleOff2;
+    redEye = !redEye;
+    if (redEye) {
+      redEyeIcon2 = Icon(Icons.visibility);
+    } else {
+      redEyeIcon2 = Icon(Icons.visibility_off);
+    }
+    emit(RegisterChangeVisibilityState());
+  }
+
+  void changeRightsChecked() {
+    rightsChecked = !rightsChecked;
+    emit(RegisterChangeVisibilityState());
+  }
+
+  void changeTermsChecked() {
+    termsChecked = !termsChecked;
+    emit(RegisterChangeVisibilityState());
+  }
+
+  // // To pick an image from the gallery:
+  // Future<void> pickImageFromGallery({required String avatar}) async {
+  //   final XFile? pickedFile = await imagePicker.pickImage(
+  //     source: ImageSource.gallery,
+  //   );
+  //   if (pickedFile != null) {
+  //     avatar = pickedFile.path.toString();
+  //     print(avatar);
+  //   }
+  // }
+  //
+  // // To pick an image from the camera:
+  // Future<void> pickImageFromCamera({required String avatar}) async {
+  //   final XFile? pickedFile = await imagePicker.pickImage(
+  //     source: ImageSource.camera,
+  //   );
+  //   if (pickedFile != null) {
+  //     avatar = pickedFile.path.toString();
+  //     print(avatar);
+  //   }
+  // }
+
+  void userRegister({
+    required String email,
+    required String password,
+    required String name,
+    String? bio,
+    List<File>? gallery,
+    required String birthday,
+    required String phone,
+  }) {
+    emit(RegisterLoadingState());
+    FirebaseAuth.instance
+        .createUserWithEmailAndPassword(email: email, password: password)
+        .then((value) {
+          print(value.user!.email);
+          print(value.user!.uid);
+          createUserData(
+            email: email,
+            password: password,
+            name: name,
+            bio: bio ?? 'Write your bio...',
+            gallery: gallery ?? [],
+            birthday: birthday,
+            phone: phone,
+            uId: value.user!.uid,
+            isEmailVerified: false,
+          );
+        })
+        .catchError((error) {
+          emit(RegisterErrorState(error.toString()));
+        });
+  }
+
+  void createUserData({
+    required String email,
+    required String password,
+    required String name,
+    required String birthday,
+    List<File>? gallery,
+    String? bio,
+    required String phone,
+    String? imageUrl,
+    String? coverImageUrl,
+    required String uId,
+    required bool isEmailVerified,
+  }) {
+    userModel model = userModel(
+      email: email,
+      password: password,
+      name: name,
+      birthday: birthday,
+      imagesOfGallery: gallery,
+      phone: phone,
+      bio: 'Write your bio...',
+      image:
+          'https://lh3.googleusercontent.com/a/ACg8ocJfXFIkop7eOqMZIu1erFqEuTs8kWiLC_5oSOrZNl7u-R5M2HHW=s288-c-no',
+      coverImage:
+          'https://images.pexels.com/photos/33107538/pexels-photo-33107538.jpeg',
+      uId: uId,
+      isEmailVerified: isEmailVerified,
+    );
+    emit(CreateUserLoadingState());
+    FirebaseFirestore.instance
+        .collection('users')
+        .doc(uId)
+        .set(model.toMap())
+        .then((value) {
+          emit(CreateUserSuccessState());
+        })
+        .catchError((error) {
+          print(error.toString());
+          emit(CreateUserErrorState(error.toString()));
+        });
+  }
+}

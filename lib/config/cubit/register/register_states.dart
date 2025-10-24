@@ -1,0 +1,23 @@
+abstract class RegisterStates {}
+
+class InitRegisterState extends RegisterStates {}
+
+class RegisterChangeVisibilityState extends RegisterStates {}
+
+class RegisterLoadingState extends RegisterStates {}
+
+class RegisterSuccessState extends RegisterStates {}
+
+class RegisterErrorState extends RegisterStates {
+  final String error;
+  RegisterErrorState(this.error);
+}
+
+class CreateUserLoadingState extends RegisterStates {}
+
+class CreateUserSuccessState extends RegisterStates {}
+
+class CreateUserErrorState extends RegisterStates {
+  final String error;
+  CreateUserErrorState(this.error);
+}

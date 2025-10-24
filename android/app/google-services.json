@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "164683215851",
+    "project_id": "my-mobile-apps-div",
+    "storage_bucket": "my-mobile-apps-div.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:164683215851:android:6c53c2211b98421417dfae",
+        "android_client_info": {
+          "package_name": "com.budlee.app.budlee_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB9VYRczUJkah5T00Yy2dOOPNnloTVYkZM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
