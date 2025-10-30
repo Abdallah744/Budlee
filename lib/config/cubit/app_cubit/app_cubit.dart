@@ -42,6 +42,7 @@ class AppCubit extends Cubit<AppState> {
   var currentIndex = 0;
   File? postImageFile;
   var avatar = '';
+  List<userModel> myFriends = [];
   List<userModel> users = [];
   var massageController = TextEditingController();
   List<String> lastMessages = [];
@@ -510,6 +511,22 @@ class AppCubit extends Cubit<AppState> {
         })
         .catchError((error) {
           emit(GetUserDataErrorState(error.toString()));
+        });
+  }
+
+  void addFriend(String? friendId) {
+    emit(AddFriendLoadingState());
+    FirebaseFirestore.instance
+        .collection('users')
+        .doc(model!.uId)
+        .collection('friends')
+        .doc(friendId)
+        .set({'friendId': friendId})
+        .then((value) {
+          emit(AddFriendSuccessState());
+        })
+        .catchError((error) {
+          emit(AddFriendErrorState(error.toString()));
         });
   }
 

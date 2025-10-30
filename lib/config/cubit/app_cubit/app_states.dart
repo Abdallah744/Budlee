@@ -150,3 +150,13 @@ class GetAllUsersErrorState extends AppState {
 class LogOutLoadingState extends AppState {}
 
 class LogOutSuccessState extends AppState {}
+
+// Add Friend
+class AddFriendLoadingState extends AppState {}
+
+class AddFriendSuccessState extends AppState {}
+
+class AddFriendErrorState extends AppState {
+  final String error;
+  AddFriendErrorState(this.error);
+}
