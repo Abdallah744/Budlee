@@ -160,3 +160,13 @@ class AddFriendErrorState extends AppState {
   final String error;
   AddFriendErrorState(this.error);
 }
+
+// remove Friend
+class RemoveFriendLoadingState extends AppState {}
+
+class RemoveFriendSuccessState extends AppState {}
+
+class RemoveFriendErrorState extends AppState {
+  final String error;
+  RemoveFriendErrorState(this.error);
+}

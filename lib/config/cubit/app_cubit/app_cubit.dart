@@ -2,6 +2,7 @@
 
 import 'dart:io';
 
+import 'package:budlee_app/models/users/friends_model.dart';
 import 'package:budlee_app/models/users/user_model.dart';
 import 'package:budlee_app/modules/screens/chats/chats.dart';
 import 'package:budlee_app/modules/screens/feeds/feeds_screen.dart';
@@ -37,6 +38,7 @@ class AppCubit extends Cubit<AppState> {
   PostsModel? postModel;
   CommentsModel? commentModel;
   MassageModel? massageModel;
+  FriendsModel? friendModel;
 
   final ImagePicker imagePicker = ImagePicker();
   var currentIndex = 0;
@@ -523,10 +525,62 @@ class AppCubit extends Cubit<AppState> {
         .doc(friendId)
         .set({'friendId': friendId})
         .then((value) {
+          users.forEach((element) {
+            if (element.uId == friendId) {
+              myFriends.add(element);
+              FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(friendId)
+                  .collection('friends')
+                  .add({
+                    'name': element.name,
+                    'birthday': element.birthday,
+                    'bio': element.bio,
+                    'avatar': element.image,
+                    // Use the getter for imagesOfGallery
+                    'gallery': element.imagesOfGallery
+                        ?.map((file) => file.path)
+                        .toList()
+                        .toString(),
+                    'profileImageFile': element.profileImageFile?.path,
+                    'coverImageFile': element.coverImageFile?.path,
+                    'coverImage': element.coverImage,
+                    'phone': element.phone,
+                    'uId': friendId,
+                  });
+            }
+          });
           emit(AddFriendSuccessState());
         })
         .catchError((error) {
           emit(AddFriendErrorState(error.toString()));
+        });
+  }
+
+  void removeFriend(String? friendId) {
+    emit(RemoveFriendLoadingState());
+    FirebaseFirestore.instance
+        .collection('users')
+        .doc(model!.uId)
+        .collection('friends')
+        .doc(friendId)
+        .delete()
+        .then((value) {
+          users.forEach((element) {
+            if (element.uId == friendId) {
+              myFriends.remove(element);
+              FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(friendId)
+                  .collection('friends')
+                  .doc(model!.uId)
+                  .delete();
+            }
+          });
+          emit(RemoveFriendSuccessState());
+        })
+        .catchError((error) {
+          emit(RemoveFriendErrorState(error.toString()));
         });
   }
 
