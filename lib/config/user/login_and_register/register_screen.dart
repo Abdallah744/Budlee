@@ -115,7 +115,6 @@ class RegisterScreen extends StatelessWidget {
                           } else if (value.length < 6) {
                             return 'password is too short';
                           } else {
-                            cubit.passwordController.text = value;
                             return null;
                           }
                         },

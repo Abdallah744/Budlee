@@ -1,3 +1,5 @@
+// ignore_for_file: use_key_in_widget_constructors, must_be_immutable
+
 import 'package:budlee_app/config/user/login_and_register/register_screen.dart';
 import 'package:budlee_app/core/components/components.dart';
 import 'package:conditional_builder_null_safety/conditional_builder_null_safety.dart';
@@ -10,8 +12,6 @@ import '../../../core/styles/colors.dart';
 import '../../../modules/layouts/home_layout/home_page.dart';
 
 class Login extends StatelessWidget {
-  var emailController = TextEditingController();
-  var passwordController = TextEditingController();
   @override
   Widget build(BuildContext context) {
     return BlocConsumer<LoginCubit, LoginStates>(
@@ -66,7 +66,7 @@ class Login extends StatelessWidget {
                     ),
                     SizedBox(height: 35),
                     emailTextFormField(
-                      controller: emailController,
+                      controller: cubit.emailController,
                       type: TextInputType.emailAddress,
                       validate: (value) {
                         if (value!.isEmpty) {
@@ -74,7 +74,6 @@ class Login extends StatelessWidget {
                         } else if (!value.contains('@')) {
                           return 'email address must be valid';
                         } else {
-                          emailController.text = value.toString();
                           return null;
                         }
                       },
@@ -83,7 +82,7 @@ class Login extends StatelessWidget {
                     ),
                     SizedBox(height: 15),
                     passwordTextFormField(
-                      controller: passwordController,
+                      controller: cubit.passwordController,
                       type: TextInputType.visiblePassword,
                       isPassword: cubit.visibleOff,
                       validate: (value) {
@@ -92,7 +91,6 @@ class Login extends StatelessWidget {
                         } else if (value.length < 6) {
                           return 'password must be at least 6 characters';
                         } else {
-                          passwordController.text = value.toString();
                           return null;
                         }
                       },
@@ -142,10 +140,9 @@ class Login extends StatelessWidget {
                           if (cubit.formKey.currentState!.validate() &&
                               cubit.checked) {
                             cubit.userLogin(
-                              emailController.text,
-                              passwordController.text,
+                              cubit.emailController.text,
+                              cubit.passwordController.text,
                             );
-                            print("Login Successfully");
                           }
                         },
                         text: 'Login',
@@ -155,6 +152,7 @@ class Login extends StatelessWidget {
                       fallback: (context) =>
                           Center(child: CircularProgressIndicator()),
                     ),
+
                     SizedBox(height: 10.0),
                     Row(
                       children: [

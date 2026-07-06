@@ -305,9 +305,6 @@ class SettingsScreen extends StatelessWidget {
                 const SizedBox(height: 5),
                 if (state is UploadToGalleryLoadingState)
                   const LinearProgressIndicator(),
-                model.imagesOfGallery == null
-                    ? const LinearProgressIndicator()
-                    : galleryItemBuilder(model.imagesOfGallery!, context),
               ],
             ),
           ),

@@ -59,7 +59,7 @@ void main() async {
   FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
   Bloc.observer = MyBlocObserver();
-  await CashHelper.init(); // Added await here
+  await CashHelper.init();
   bool? onBoarding = CashHelper.get(key: 'onBoarding');
   uId = CashHelper.get(key: 'uId') ?? '';
   runApp(MyApp(onBoarding: onBoarding ?? false, uId: uId));
@@ -76,8 +76,6 @@ class MyApp extends StatelessWidget {
     return MultiBlocProvider(
       providers: [
         BlocProvider(create: (context) => LoginCubit()),
-        // Provide AppCubit if isLogin is true, as HomeScreen will need it.
-        // The getUserData call is still conditional on uId.
         BlocProvider(
           create: (context) => AppCubit()
             ..getUserData(uId!)
