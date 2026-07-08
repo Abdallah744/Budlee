@@ -1,18 +1,18 @@
 import 'package:budlee_app/core/components/components.dart';
-import 'package:budlee_app/modules/layouts/home_layout/home_page.dart';
 import 'package:budlee_app/utils/shared/network/local/cash_helper.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'config/cubit/app_cubit/app_cubit.dart';
 import 'config/cubit/bloc_observe.dart';
 import 'config/cubit/login/login_cubit.dart';
-import 'config/user/login_and_register/login_screen.dart';
 import 'core/constants/constants.dart';
 import 'core/styles/themes.dart';
+import 'modules/splash_screen.dart';
 
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   // If you're going to use other Firebase services in the background, such as Firestore,
@@ -35,6 +35,10 @@ void main() async {
         appId: "1:164683215851:web:a8d63e95b90f4ab817dfae",
         measurementId: "G-136TQEMZP5",
       ),
+    );
+    await Supabase.initialize(
+      url: 'https://updocizudnatmwzyfcne.supabase.co',
+      publishableKey: 'sb_publishable_K6vHM1dGaos_G_W5lMkEzA_D7NGvS_4',
     );
   } else {
     await Firebase.initializeApp();
@@ -62,7 +66,7 @@ void main() async {
   await CashHelper.init();
   bool? onBoarding = CashHelper.get(key: 'onBoarding');
   uId = CashHelper.get(key: 'uId') ?? '';
-  runApp(MyApp(onBoarding: onBoarding ?? false, uId: uId));
+  runApp(MyApp(onBoarding: onBoarding ?? true, uId: uId));
 }
 
 class MyApp extends StatelessWidget {
@@ -88,7 +92,7 @@ class MyApp extends StatelessWidget {
         theme: lightTheme,
         darkTheme: darkTheme,
         themeMode: ThemeMode.light,
-        home: uId!.isNotEmpty ? HomeScreen() : Login(),
+        home: SplashScreen(uId: uId, onBoarding: onBoarding),
       ),
     );
   }
