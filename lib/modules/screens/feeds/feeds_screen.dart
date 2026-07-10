@@ -229,16 +229,37 @@ class Feeds extends StatelessWidget {
                 ),
                 if (postModel != null && userId != postModel.uId) // Updated
                   InkWell(
-                    onTap: () {},
+                    onTap: () {
+                      if (!cubit.myFriends.any(
+                        (element) => element.uId == postModel.uId,
+                      )) {
+                        cubit.addFriend(postModel.uId);
+                      }
+                    },
                     child: Row(
                       children: [
-                        Icon(Icons.add, size: 20, color: Colors.blueAccent),
+                        cubit.myFriends.any(
+                              (element) => element.uId == postModel.uId,
+                            )
+                            ? Icon(
+                                Icons.check_circle,
+                                size: 20,
+                                color: Colors.blueAccent,
+                              )
+                            : Icon(
+                                Icons.add_circle_outline,
+                                size: 20,
+                                color: Colors.blueAccent,
+                              ),
                         Text(
-                          followingState,
+                          cubit.myFriends.any(
+                                (element) => element.uId == postModel.uId,
+                              )
+                              ? 'Friend'
+                              : followingState,
                           style: TextStyle(
                             color: Colors.blueAccent,
-                            fontSize:
-                                14, // Restored missing attribute from original context
+                            fontSize: 14,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -272,7 +293,9 @@ class Feeds extends StatelessWidget {
                 elevation: 1,
                 margin: EdgeInsets.zero,
                 child: Image(
-                  image: FileImage(File(postModel.postImage!)),
+                  image: postModel.postImage!.startsWith('http')
+                      ? NetworkImage(postModel.postImage!)
+                      : FileImage(File(postModel.postImage!)) as ImageProvider,
                   fit: BoxFit.fitWidth,
                   height: 200,
                   width: double.infinity,

@@ -1,4 +1,4 @@
-// ignore_for_file: unnecessary_import, unused_import, unused_local_variable
+// ignore_for_file: unnecessary_import, unused_import, unused_local_variable, unnecessary_null_comparison
 
 import 'dart:io';
 
@@ -7,6 +7,7 @@ import 'package:budlee_app/models/users/user_model.dart';
 import 'package:budlee_app/modules/screens/chats/chats.dart';
 import 'package:budlee_app/modules/screens/feeds/feeds_screen.dart';
 import 'package:budlee_app/modules/screens/friends/friends.dart';
+import 'package:budlee_app/utils/shared/network/local/cash_helper.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart' as firebase_storage;
@@ -17,15 +18,16 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:form_builder_image_picker/form_builder_image_picker.dart';
 import 'package:icons_flutter/icons_flutter.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 
 import '../../../core/components/components.dart';
+import '../../../core/constants/constants.dart';
 import '../../../models/comments/comments_model.dart';
 import '../../../models/massages/massage_model.dart';
 import '../../../models/posts/posts_model.dart';
 import '../../../modules/screens/feeds/comments_screen.dart';
 import '../../../modules/screens/new_posts/new_posts.dart';
 import '../../../modules/screens/settings/settings.dart';
-import '../../../modules/screens/users/users.dart';
 import 'app_states.dart';
 
 class AppCubit extends Cubit<AppState> {
@@ -39,10 +41,13 @@ class AppCubit extends Cubit<AppState> {
   CommentsModel? commentModel;
   MassageModel? massageModel;
   FriendsModel? friendModel;
+  File? selectedImage;
+  FirebaseAuth auth = FirebaseAuth.instance;
 
   final ImagePicker imagePicker = ImagePicker();
   var currentIndex = 0;
   File? postImageFile;
+  String? postImageUrl;
   var avatar = '';
   List<userModel> myFriends = [];
   List<userModel> users = [];
@@ -54,6 +59,7 @@ class AppCubit extends Cubit<AppState> {
   var amountOfPosts = 0;
   var amountOfFollowers = 0;
   var chatItemIndex;
+  bool isFriend = false;
   var amountOfFollowing = 0;
   var amountOfViews = 0;
   var myPosts = [];
@@ -82,23 +88,13 @@ class AppCubit extends Cubit<AppState> {
       icon: Icon(Icons.people_alt_outlined),
       label: 'Friends',
     ),
-    const BottomNavigationBarItem(
-      icon: Icon(Icons.location_on_outlined),
-      label: 'Users Nearby',
-    ),
     const BottomNavigationBarItem(icon: Icon(Icons.chat), label: 'Messages'),
     const BottomNavigationBarItem(
       icon: Icon(Icons.settings),
       label: 'Settings',
     ),
   ];
-  List<Widget> screens = [
-    Feeds(),
-    Friends(),
-    UsersNearby(),
-    Chats(),
-    SettingsScreen(),
-  ];
+  List<Widget> screens = [Feeds(), Friends(), Chats(), SettingsScreen()];
   List<String> titles = [
     'News Feed',
     'Friends',
@@ -123,11 +119,7 @@ class AppCubit extends Cubit<AppState> {
   }
 
   int myPostsCalculation() {
-    for (var element in posts) {
-      if (element.uId == model!.uId) {
-        myPosts.add(element);
-      }
-    }
+    myPosts = posts.where((element) => element.uId == model?.uId).toList();
     return myPosts.length;
   }
 
@@ -142,51 +134,114 @@ class AppCubit extends Cubit<AppState> {
   }
 
   Future<void> getCoverImage() async {
-    emit(UploadCoverImageLoadingState());
     final pickedFile = await imagePicker.pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
-      model!.coverImageFile = File(pickedFile.path);
-      model!.imagesOfGallery!.add(model!.coverImageFile!);
-      emit(UploadCoverImageSuccessState());
+      emit(UploadCoverImageLoadingState());
+      File imageFile = File(pickedFile.path);
+
+      String? imageUrl = await uploadToSubabase(imagefile: imageFile);
+
+      if (imageUrl != null) {
+        if (model!.imagesOfGallery == null) {
+          model!.imagesOfGallery = [];
+        }
+
+        List<String> galleryPaths = model!.imagesOfGallery!
+            .map((file) => file.path)
+            .toList();
+        galleryPaths.add(imageUrl);
+
+        FirebaseFirestore.instance
+            .collection('users')
+            .doc(model!.uId)
+            .update({'coverImage': imageUrl, 'gallery': galleryPaths})
+            .then((value) {
+              getUserData(model!.uId);
+              emit(UploadCoverImageSuccessState());
+            })
+            .catchError((error) {
+              emit(UploadCoverImageErrorState(error.toString()));
+            });
+      } else {
+        emit(UploadCoverImageErrorState('Failed to upload image'));
+      }
     } else {
       emit(UploadCoverImageErrorState('No image selected'));
     }
   }
 
   Future<void> getProfileImage() async {
-    emit(UploadProfileImageLoadingState());
     final pickedFile = await imagePicker.pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
-      model!.profileImageFile = File(pickedFile.path);
-      model!.imagesOfGallery!.add(model!.coverImageFile!);
-      emit(UploadProfileImageSuccessState());
+      emit(UploadProfileImageLoadingState());
+      File imageFile = File(pickedFile.path);
+
+      String? imageUrl = await uploadToSubabase(imagefile: imageFile);
+
+      if (imageUrl != null) {
+        if (model!.imagesOfGallery == null) {
+          model!.imagesOfGallery = [];
+        }
+
+        List<String> galleryPaths = model!.imagesOfGallery!
+            .map((file) => file.path)
+            .toList();
+        galleryPaths.add(imageUrl);
+
+        FirebaseFirestore.instance
+            .collection('users')
+            .doc(model!.uId)
+            .update({'avatar': imageUrl, 'gallery': galleryPaths})
+            .then((value) {
+              getUserData(model!.uId);
+              emit(UploadProfileImageSuccessState());
+            })
+            .catchError((error) {
+              emit(UploadProfileImageErrorState(error.toString()));
+            });
+      } else {
+        emit(UploadProfileImageErrorState('Failed to upload image'));
+      }
     } else {
       emit(UploadProfileImageErrorState('No image selected'));
     }
   }
 
   Future<void> getPostsImage() async {
-    emit(UploadPostsImageLoadingState());
     final pickedFile = await imagePicker.pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
+      emit(UploadPostsImageLoadingState());
       postImageFile = File(pickedFile.path);
-      model!.imagesOfGallery!.add(postImageFile!);
-      FirebaseFirestore.instance
-          .collection('users')
-          .doc(model!.uId)
-          .update({
-            'gallery': model!.imagesOfGallery!
-                .map((file) => file.path)
-                .toList(),
-          })
-          .then((value) {
-            getUserData(model!.uId);
-            emit(UploadToGallerySuccessState());
-          })
-          .catchError((error) {
-            emit(UploadToGalleryErrorState(error.toString()));
-          });
-      emit(UploadPostsImageSuccessState());
+
+      String? imageUrl = await uploadToSubabase(imagefile: postImageFile!);
+
+      if (imageUrl != null) {
+        postImageUrl = imageUrl; // Store URL for createPost
+        if (model!.imagesOfGallery == null) {
+          model!.imagesOfGallery = [];
+        }
+
+        List<String> galleryPaths = model!.imagesOfGallery!
+            .map((file) => file.path)
+            .toList();
+        galleryPaths.add(imageUrl);
+
+        FirebaseFirestore.instance
+            .collection('users')
+            .doc(model!.uId)
+            .update({'gallery': galleryPaths})
+            .then((value) {
+              getUserData(model!.uId);
+              emit(UploadPostsImageSuccessState());
+              emit(UploadToGallerySuccessState());
+            })
+            .catchError((error) {
+              emit(UploadToGalleryErrorState(error.toString()));
+              emit(UploadPostsImageErrorState(error.toString()));
+            });
+      } else {
+        emit(UploadPostsImageErrorState('Failed to upload image'));
+      }
     } else {
       emit(UploadPostsImageErrorState('No image selected'));
     }
@@ -204,30 +259,6 @@ class AppCubit extends Cubit<AppState> {
           emit(LogOutSuccessState());
         });
   }
-
-  // Future<void> uploadProfileImage() async {
-  //   emit(UploadProfileImageLoadingState());
-  //   firebase_storage.FirebaseStorage.instance
-  //       .ref()
-  //       .child(
-  //         'users/${Uri.file(model!.profileImageFile!.path).pathSegments.last}',
-  //       )
-  //       .putFile(model!.profileImageFile!)
-  //       .then((value) {
-  //         value.ref
-  //             .getDownloadURL()
-  //             .then((value) {
-  //               emit(UploadProfileImageSuccessState());
-  //               updateUserData(avatar: value);
-  //             })
-  //             .catchError((error) {
-  //               emit(UploadProfileImageErrorState(error.toString()));
-  //             });
-  //       })
-  //       .catchError((error) {
-  //         emit(UploadProfileImageErrorState(error.toString()));
-  //       });
-  // }
 
   void updateUserData({
     String? name,
@@ -270,6 +301,7 @@ class AppCubit extends Cubit<AppState> {
 
   void removePostImage() {
     postImageFile = null;
+    postImageUrl = null;
     emit(RemovePostImageState());
   }
 
@@ -302,6 +334,8 @@ class AppCubit extends Cubit<AppState> {
         .set(newPostModel.toMap())
         .then((value) {
           getPosts();
+          postImageFile = null;
+          postImageUrl = null;
           emit(CreatePostSuccessState());
         })
         .catchError((error) {
@@ -347,47 +381,134 @@ class AppCubit extends Cubit<AppState> {
         });
   }
 
-  Future<void> uploadToGallery() async {
-    emit(UploadToGalleryLoadingState());
-    final pickedFile = await imagePicker.pickImage(source: ImageSource.gallery);
-    if (pickedFile != null) {
-      if (model == null) {
-        emit(UploadToGalleryErrorState('User data not available'));
+  Future<void> pickImage() async {
+    emit(ProfileLoading());
+    try {
+      final XFile? pickedFile = await imagePicker.pickImage(
+        source: ImageSource.gallery,
+      );
+      if (pickedFile == null) {
+        emit(ProfileError('No image selected'));
         return;
       }
-      model!.imagesOfGallery ??= [
-        model!.coverImageFile == null
-            ? (model!.coverImage.toString().startsWith('http')
-                  ? NetworkImage(model!.coverImage.toString())
-                  : FileImage(File(model!.coverImage.toString()))
-                        as ImageProvider) // Added 'as ImageProvider' for clarity
-            : FileImage(model!.coverImageFile!),
-        model!.profileImageFile == null
-            ? (model!.image.toString().startsWith('http')
-                  ? NetworkImage(model!.image.toString())
-                  : FileImage(File(model!.image.toString()))
-                        as ImageProvider) // Added 'as ImageProvider' for clarity
-            : FileImage(model!.profileImageFile!),
-      ]; // Initialize if null
-      model!.imagesOfGallery!.add(File(pickedFile.path));
-      FirebaseFirestore.instance
-          .collection('users')
-          .doc(model!.uId)
-          .update({
-            'gallery': model!.imagesOfGallery!
-                .map((file) => file.path)
-                .toList(),
-          })
-          .then((value) {
-            getUserData(model!.uId);
-            emit(UploadToGallerySuccessState());
-          })
-          .catchError((error) {
-            emit(UploadToGalleryErrorState(error.toString()));
-          });
-    } else {
-      emit(UploadToGalleryErrorState('No image selected'));
+      selectedImage = File(pickedFile.path);
+      emit(ProfileSuccess(selectedImage!));
+    } on Exception catch (e) {
+      emit(ProfileError(e.toString()));
     }
+  }
+
+  Future<String?> uploadToSubabase({required File imagefile}) async {
+    emit(UploadToSupabaseLoadingState());
+    final User? current = auth.currentUser;
+    if (current == null) {
+      emit(UploadToSupabaseErrorState('User data not available'));
+      return null;
+    }
+
+    try {
+      final SupabaseClient supabaseClient = Supabase.instance.client;
+      final String imagePath =
+          'users/${current.uid}/profile_${DateTime.now().microsecondsSinceEpoch}.jpg';
+
+      await supabaseClient.storage.from('images').upload(imagePath, imagefile);
+      final String imageUrl = supabaseClient.storage
+          .from('images')
+          .getPublicUrl(imagePath);
+      emit(UploadToSupabaseSuccessState());
+      return imageUrl;
+    } catch (error) {
+      print('Supabase error check: Have you restarted the app? $error');
+      emit(
+        UploadToSupabaseErrorState(
+          'Upload failed. Please restart the app. Details: $error',
+        ),
+      );
+      return null;
+    }
+  }
+
+  updateDataAndGetUrl({
+    required String name,
+    required File imageFile,
+    required String type,
+  }) async {
+    final User? current = auth.currentUser;
+    if (current == null) {
+      emit(ProfileError('User data not available'));
+      return;
+    }
+    final Map<String, dynamic> data = {};
+    if (name.trim().isNotEmpty) {
+      data['name'] = name.trim();
+    }
+    if (imageFile != null) {
+      final String? imageUrl = await uploadToSubabase(imagefile: imageFile);
+      if (imageUrl != null) {
+        data[type] = imageUrl;
+      }
+    }
+    if (data.isEmpty) {
+      emit(ProfileError('No data to update'));
+      return;
+    }
+    FirebaseFirestore.instance
+        .collection('users')
+        .doc(current.uid)
+        .update(data)
+        .then((value) {
+          getUserData(current.uid);
+          emit(UpdateUserDataSuccessState());
+        })
+        .catchError((error) {
+          emit(UpdateUserDataErrorState(error.toString()));
+        });
+  }
+
+  updateDataAndGetGalleryUrl({required File imageFile}) async {
+    final User? current = auth.currentUser;
+    if (current == null) {
+      emit(UploadToGalleryErrorState('User data not available'));
+      return;
+    }
+
+    final String? imageUrl = await uploadToSubabase(imagefile: imageFile);
+    if (imageUrl == null) {
+      emit(UploadToGalleryErrorState('Failed to upload image'));
+      return;
+    }
+
+    if (model!.imagesOfGallery == null) {
+      model!.imagesOfGallery = [];
+    }
+
+    List<String> galleryPaths = model!.imagesOfGallery!
+        .map((file) => file.path)
+        .toList();
+    galleryPaths.add(imageUrl);
+
+    FirebaseFirestore.instance
+        .collection('users')
+        .doc(model!.uId)
+        .update({'gallery': galleryPaths})
+        .then((value) {
+          getUserData(model!.uId);
+          emit(UploadToGallerySuccessState());
+        })
+        .catchError((error) {
+          emit(UploadToGalleryErrorState(error.toString()));
+        });
+  }
+
+  Future<void> uploadGalleryImage() async {
+    final XFile? pickedFile = await imagePicker.pickImage(
+      source: ImageSource.gallery,
+    );
+    if (pickedFile == null) {
+      emit(UploadToGalleryErrorState('No image selected'));
+      return;
+    }
+    await updateDataAndGetGalleryUrl(imageFile: File(pickedFile.path));
   }
 
   void moveBetweenPostsAndMainScreen(context) {
@@ -408,6 +529,7 @@ class AppCubit extends Cubit<AppState> {
                 users.add(userModel.fromJson(element.data()));
               }
             });
+            getFriends();
             emit(GetAllUsersSuccessState());
           })
           .catchError((error) {
@@ -516,7 +638,37 @@ class AppCubit extends Cubit<AppState> {
         });
   }
 
+  void getFriends() {
+    emit(GetFriendsLoadingState());
+    FirebaseFirestore.instance
+        .collection('users')
+        .doc(model?.uId ?? uId)
+        .collection('friends')
+        .get()
+        .then((value) {
+          myFriends = [];
+          value.docs.forEach((doc) {
+            String friendId = doc.id;
+            // Try to find the friend in the users list
+            final friend = users.firstWhere(
+              (element) => element.uId == friendId,
+              orElse: () => userModel(isEmailVerified: false),
+            );
+            if (friend.uId != null) {
+              myFriends.add(friend);
+            }
+          });
+          emit(GetFriendsSuccessState());
+        })
+        .catchError((error) {
+          emit(GetFriendsErrorState(error.toString()));
+        });
+  }
+
   void addFriend(String? friendId) {
+    if (myFriends.any((element) => element.uId == friendId)) {
+      return;
+    }
     emit(AddFriendLoadingState());
     FirebaseFirestore.instance
         .collection('users')
@@ -525,31 +677,22 @@ class AppCubit extends Cubit<AppState> {
         .doc(friendId)
         .set({'friendId': friendId})
         .then((value) {
-          users.forEach((element) {
-            if (element.uId == friendId) {
-              myFriends.add(element);
-              FirebaseFirestore.instance
-                  .collection('users')
-                  .doc(friendId)
-                  .collection('friends')
-                  .add({
-                    'name': element.name,
-                    'birthday': element.birthday,
-                    'bio': element.bio,
-                    'avatar': element.image,
-                    // Use the getter for imagesOfGallery
-                    'gallery': element.imagesOfGallery
-                        ?.map((file) => file.path)
-                        .toList()
-                        .toString(),
-                    'profileImageFile': element.profileImageFile?.path,
-                    'coverImageFile': element.coverImageFile?.path,
-                    'coverImage': element.coverImage,
-                    'phone': element.phone,
-                    'uId': friendId,
-                  });
-            }
-          });
+          final friend = users.firstWhere(
+            (element) => element.uId == friendId,
+            orElse: () => userModel(isEmailVerified: false),
+          );
+
+          if (friend.uId != null) {
+            myFriends.add(friend);
+          }
+
+          FirebaseFirestore.instance
+              .collection('users')
+              .doc(friendId)
+              .collection('friends')
+              .doc(model!.uId)
+              .set({'friendId': model!.uId});
+
           emit(AddFriendSuccessState());
         })
         .catchError((error) {
@@ -577,6 +720,7 @@ class AppCubit extends Cubit<AppState> {
                   .delete();
             }
           });
+          isFriend = false;
           emit(RemoveFriendSuccessState());
         })
         .catchError((error) {

@@ -89,13 +89,11 @@ class NewPosts extends StatelessWidget {
               TextButton(
                 onPressed: () {
                   cubit.createPost(
-                    postImage: cubit.postImageFile?.path ?? '',
+                    postImage: cubit.postImageUrl ?? '',
                     profileImage: cubit.model?.image ?? '',
                     dateTime: DateTime.now().toString(),
                     text: cubit.postTextController.text,
                   );
-                  print(cubit.postModel!.name);
-                  print(cubit.postModel!.image);
                   cubit.postTextController.clear();
                 },
                 child: Text(

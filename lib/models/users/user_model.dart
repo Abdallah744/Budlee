@@ -6,14 +6,7 @@ class userModel {
   String? name;
   String? birthday;
   String? phone;
-  List<File>? _imagesOfGallery = [
-    File(
-      '/data/user/0/com.budlee.app.budlee_app/cache/c7bd4d45-5089-465b-ab64-a1d36815adc0/1000485663.jpg',
-    ),
-    File(
-      '/data/user/0/com.budlee.app.budlee_app/cache/bd0fe56f-00e6-4f14-b5bb-8382e25169d6/1000465734.png',
-    ),
-  ];
+  List<File>? _imagesOfGallery = [];
   String? bio;
   String? image; // Assumed to be a URL/path string
   String? coverImage; // Assumed to be a URL/path string
@@ -54,7 +47,6 @@ class userModel {
     } else if (value is List<String>) {
       _imagesOfGallery = value.map((path) => File(path)).toList();
     } else if (value is List) {
-      // Attempt to convert if it's List<dynamic> containing strings or files
       if (value.every((e) => e is String)) {
         _imagesOfGallery = value
             .cast<String>()

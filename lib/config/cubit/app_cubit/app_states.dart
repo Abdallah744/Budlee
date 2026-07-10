@@ -1,3 +1,5 @@
+import 'dart:io';
+
 abstract class AppState {}
 
 class AppInitialStat extends AppState {}
@@ -170,3 +172,39 @@ class RemoveFriendErrorState extends AppState {
   final String error;
   RemoveFriendErrorState(this.error);
 }
+
+// Get Friends
+class GetFriendsLoadingState extends AppState {}
+
+class GetFriendsSuccessState extends AppState {}
+
+class GetFriendsErrorState extends AppState {
+  final String error;
+  GetFriendsErrorState(this.error);
+}
+
+// profile
+
+class ProfileLoading extends AppState {}
+
+class ProfileError extends AppState {
+  final String error;
+  ProfileError(this.error);
+}
+
+class ProfileSuccess extends AppState {
+  final File imageFile;
+  ProfileSuccess(this.imageFile);
+}
+
+// upload to supabase
+
+class UploadToSupabaseLoadingState extends AppState {}
+
+class UploadToSupabaseErrorState extends AppState {
+  final String error;
+
+  UploadToSupabaseErrorState(this.error);
+}
+
+class UploadToSupabaseSuccessState extends AppState {}

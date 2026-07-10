@@ -6,10 +6,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 
-import '../../../config/cubit/register/register_cubit.dart';
-import '../../../config/cubit/register/register_states.dart';
-import '../../../core/components/components.dart';
-import '../../../core/styles/colors.dart';
+import 'package:budlee_app/config/cubit/register/register_cubit.dart';
+import 'package:budlee_app/config/cubit/register/register_states.dart';
+import 'package:budlee_app/core/components/components.dart';
+import 'package:budlee_app/core/styles/colors.dart';
 
 class RegisterScreen extends StatelessWidget {
   @override

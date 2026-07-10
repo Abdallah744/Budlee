@@ -1,13 +1,12 @@
 import 'dart:io';
 
 import 'package:budlee_app/config/cubit/register/register_states.dart';
+import 'package:budlee_app/models/users/user_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
-
-import '../../../models/users/user_model.dart';
 
 class RegisterCubit extends Cubit<RegisterStates> {
   RegisterCubit() : super(InitRegisterState());
@@ -65,28 +64,6 @@ class RegisterCubit extends Cubit<RegisterStates> {
     emit(RegisterChangeVisibilityState());
   }
 
-  // // To pick an image from the gallery:
-  // Future<void> pickImageFromGallery({required String avatar}) async {
-  //   final XFile? pickedFile = await imagePicker.pickImage(
-  //     source: ImageSource.gallery,
-  //   );
-  //   if (pickedFile != null) {
-  //     avatar = pickedFile.path.toString();
-  //     print(avatar);
-  //   }
-  // }
-  //
-  // // To pick an image from the camera:
-  // Future<void> pickImageFromCamera({required String avatar}) async {
-  //   final XFile? pickedFile = await imagePicker.pickImage(
-  //     source: ImageSource.camera,
-  //   );
-  //   if (pickedFile != null) {
-  //     avatar = pickedFile.path.toString();
-  //     print(avatar);
-  //   }
-  // }
-
   void userRegister({
     required String email,
     required String password,
@@ -98,10 +75,7 @@ class RegisterCubit extends Cubit<RegisterStates> {
   }) {
     emit(RegisterLoadingState());
     FirebaseAuth.instance
-        .createUserWithEmailAndPassword(
-          email: email.trim(),
-          password: password,
-        )
+        .createUserWithEmailAndPassword(email: email.trim(), password: password)
         .then((value) {
           print(value.user!.email);
           print(value.user!.uid);

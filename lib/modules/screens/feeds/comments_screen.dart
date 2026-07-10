@@ -215,7 +215,9 @@ class CommentsScreen extends StatelessWidget {
                 elevation: 1,
                 margin: EdgeInsets.zero,
                 child: Image(
-                  image: FileImage(File(postModel.postImage!)),
+                  image: postModel.postImage!.startsWith('http')
+                      ? NetworkImage(postModel.postImage!)
+                      : FileImage(File(postModel.postImage!)) as ImageProvider,
                   fit: BoxFit.fitWidth,
                   height: 200,
                   width: double.infinity,

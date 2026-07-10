@@ -41,26 +41,25 @@ Widget defaultButton({
   double radius = 10.0,
   required Function() function,
   required String text,
-}) =>
-    Container(
-      width: width,
-      height: height,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(buttonRadius),
-        color: background,
+}) => Container(
+  width: width,
+  height: height,
+  decoration: BoxDecoration(
+    borderRadius: BorderRadius.circular(buttonRadius),
+    color: background,
+  ),
+  child: MaterialButton(
+    onPressed: function,
+    child: Text(
+      isUpperCase ? text.toUpperCase() : text,
+      style: const TextStyle(
+        color: Colors.white,
+        fontSize: 20.0,
+        fontWeight: FontWeight.bold,
       ),
-      child: MaterialButton(
-        onPressed: function,
-        child: Text(
-          isUpperCase ? text.toUpperCase() : text,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 20.0,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
-    );
+    ),
+  ),
+);
 // password FormFiled Box
 Widget passwordTextFormField({
   required TextEditingController controller,

@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -29,7 +28,6 @@ class SettingsScreen extends StatelessWidget {
       builder: (context, state) {
         var cubit = AppCubit.get(context);
         var model = cubit.model;
-
         if (model == null) {
           final user = FirebaseAuth.instance.currentUser;
           if (user != null && state is! GetUserDataLoadingState) {
@@ -41,13 +39,15 @@ class SettingsScreen extends StatelessWidget {
         }
 
         return Scaffold(
-          appBar: defaultAppBar(
-            context: context,
-            title: '${model.name}\'s Profile',
-            titleTextStyle: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.black,
+          appBar: AppBar(
+            centerTitle: true,
+            title: Text(
+              '${model.name}\'s Profile Settings',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+              ),
             ),
             actions: [
               IconButton(
@@ -243,7 +243,7 @@ class SettingsScreen extends StatelessWidget {
                     Expanded(
                       child: OutlinedButton(
                         onPressed: () {
-                          cubit.uploadToGallery();
+                          cubit.uploadGalleryImage();
                         },
                         child: const Text(
                           'Add To Gallery',
@@ -269,42 +269,59 @@ class SettingsScreen extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 15),
-                Row(
-                  children: [
-                    OutlinedButton(
-                      onPressed: () {
-                        FirebaseMessaging.instance.subscribeToTopic(
-                          'announcements',
-                        );
-                      },
-                      child: Text(
-                        'Subscribe',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    OutlinedButton(
-                      onPressed: () {
-                        FirebaseMessaging.instance.unsubscribeFromTopic(
-                          'announcements',
-                        );
-                      },
-                      child: Text(
-                        'Unsubscribe',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
                 const SizedBox(height: 5),
                 if (state is UploadToGalleryLoadingState)
                   const LinearProgressIndicator(),
+                const SizedBox(height: 20),
+                if (model.imagesOfGallery != null &&
+                    model.imagesOfGallery!.isNotEmpty)
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Gallery',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      GridView.count(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        crossAxisCount: 3,
+                        crossAxisSpacing: 5,
+                        mainAxisSpacing: 5,
+                        children: List.generate(model.imagesOfGallery!.length, (
+                          index,
+                        ) {
+                          String path = model.imagesOfGallery![index].path;
+                          bool isNetwork = path.startsWith('http');
+                          return Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(5),
+                            ),
+                            clipBehavior: Clip.antiAliasWithSaveLayer,
+                            child: isNetwork
+                                ? Image.network(
+                                    path,
+                                    fit: BoxFit.cover,
+                                    errorBuilder:
+                                        (context, error, stackTrace) =>
+                                            const Icon(Icons.broken_image),
+                                  )
+                                : Image.file(
+                                    File(path),
+                                    fit: BoxFit.cover,
+                                    errorBuilder:
+                                        (context, error, stackTrace) =>
+                                            const Icon(Icons.broken_image),
+                                  ),
+                          );
+                        }),
+                      ),
+                    ],
+                  ),
               ],
             ),
           ),

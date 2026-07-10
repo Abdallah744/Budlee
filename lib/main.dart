@@ -15,18 +15,16 @@ import 'core/styles/themes.dart';
 import 'modules/splash_screen.dart';
 
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  // If you're going to use other Firebase services in the background, such as Firestore,
-  // make sure you call `initializeApp` before using other Firebase services.
   await Firebase.initializeApp();
-
   print("Handling a background message: ${message.messageId}");
 }
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
   if (kIsWeb) {
     await Firebase.initializeApp(
-      options: FirebaseOptions(
+      options: const FirebaseOptions(
         apiKey: "AIzaSyDVEKChVkkZaaRKjBhYdhLhPYVrxem8tws",
         authDomain: "my-mobile-apps-div.firebaseapp.com",
         projectId: "my-mobile-apps-div",
@@ -36,13 +34,14 @@ void main() async {
         measurementId: "G-136TQEMZP5",
       ),
     );
-    await Supabase.initialize(
-      url: 'https://updocizudnatmwzyfcne.supabase.co',
-      publishableKey: 'sb_publishable_K6vHM1dGaos_G_W5lMkEzA_D7NGvS_4',
-    );
   } else {
     await Firebase.initializeApp();
   }
+
+  await Supabase.initialize(
+    url: 'https://updocizudnatmwzyfcne.supabase.co',
+    publishableKey: 'sb_publishable_K6vHM1dGaos_G_W5lMkEzA_D7NGvS_4',
+  );
 
   var token = await FirebaseMessaging.instance.getToken();
   print("Token: $token");
@@ -72,9 +71,8 @@ void main() async {
 class MyApp extends StatelessWidget {
   final bool onBoarding;
   final String? uId;
-  const MyApp({required this.onBoarding, required this.uId});
+  const MyApp({super.key, required this.onBoarding, required this.uId});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MultiBlocProvider(
@@ -82,9 +80,10 @@ class MyApp extends StatelessWidget {
         BlocProvider(create: (context) => LoginCubit()),
         BlocProvider(
           create: (context) => AppCubit()
-            ..getUserData(uId!)
+            ..getUserData(uId)
             ..getPosts()
-            ..getUsers(),
+            ..getUsers()
+            ..getFriends(),
         ),
       ],
       child: MaterialApp(
