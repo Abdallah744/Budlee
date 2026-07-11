@@ -2,10 +2,13 @@ import 'dart:io';
 
 import 'package:budlee_app/config/cubit/register/register_states.dart';
 import 'package:budlee_app/models/users/user_model.dart';
+import 'package:budlee_app/utils/shared/network/local/cash_helper.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import 'package:image_picker/image_picker.dart';
 
 class RegisterCubit extends Cubit<RegisterStates> {
@@ -136,5 +139,96 @@ class RegisterCubit extends Cubit<RegisterStates> {
           print(error.toString());
           emit(CreateUserErrorState(error.toString()));
         });
+  }
+
+  void registerWithGoogle() async {
+    emit(RegisterLoadingState());
+    try {
+      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+      if (googleUser == null) {
+        emit(InitRegisterState());
+        return;
+      }
+
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+      final AuthCredential credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      UserCredential userCredential =
+          await FirebaseAuth.instance.signInWithCredential(credential);
+      User? user = userCredential.user;
+
+      if (user != null) {
+        var userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+
+        if (!userDoc.exists) {
+          createUserData(
+            email: user.email ?? '',
+            password: '',
+            name: user.displayName ?? 'Google User',
+            birthday: '',
+            phone: '',
+            uId: user.uid,
+            isEmailVerified: true,
+          );
+        } else {
+          CashHelper.savedData(key: 'uId', value: user.uid);
+          emit(CreateUserSuccessState());
+        }
+      }
+    } catch (error) {
+      print(error.toString());
+      emit(RegisterErrorState(error.toString()));
+    }
+  }
+
+  void registerWithFacebook() async {
+    emit(RegisterLoadingState());
+    try {
+      final LoginResult result = await FacebookAuth.instance.login();
+
+      if (result.status == LoginStatus.success) {
+        final AuthCredential credential = FacebookAuthProvider.credential(
+          result.accessToken!.tokenString,
+        );
+
+        UserCredential userCredential =
+            await FirebaseAuth.instance.signInWithCredential(credential);
+        User? user = userCredential.user;
+
+        if (user != null) {
+          var userDoc = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .get();
+
+          if (!userDoc.exists) {
+            createUserData(
+              email: user.email ?? '',
+              password: '',
+              name: user.displayName ?? 'Facebook User',
+              birthday: '',
+              phone: '',
+              uId: user.uid,
+              isEmailVerified: true,
+            );
+          } else {
+            CashHelper.savedData(key: 'uId', value: user.uid);
+            emit(CreateUserSuccessState());
+          }
+        }
+      } else {
+        emit(RegisterErrorState(result.message ?? 'Facebook Login Failed'));
+      }
+    } catch (error) {
+      print(error.toString());
+      emit(RegisterErrorState(error.toString()));
+    }
   }
 }

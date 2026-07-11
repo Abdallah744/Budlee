@@ -281,6 +281,26 @@ Widget myDivider2() => Padding(
   ),
 );
 
+ImageProvider customImageProvider(String? imagePath) {
+  const String defaultImage =
+      'https://cdn-icons-png.flaticon.com/512/149/149071.png';
+
+  if (imagePath == null || imagePath.isEmpty) {
+    return const NetworkImage(defaultImage);
+  }
+
+  if (imagePath.startsWith('http')) {
+    return NetworkImage(imagePath);
+  }
+
+  File file = File(imagePath);
+  if (file.existsSync()) {
+    return FileImage(file);
+  }
+
+  return const NetworkImage(defaultImage);
+}
+
 // Warning massage
 Widget defaultWarningMassage({
   required String warningText,

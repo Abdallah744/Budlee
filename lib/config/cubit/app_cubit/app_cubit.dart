@@ -1,5 +1,6 @@
 // ignore_for_file: unnecessary_import, unused_import, unused_local_variable, unnecessary_null_comparison
 
+import 'dart:async';
 import 'dart:io';
 
 import 'package:budlee_app/models/users/friends_model.dart';
@@ -18,6 +19,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:form_builder_image_picker/form_builder_image_picker.dart';
 import 'package:icons_flutter/icons_flutter.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:record/record.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 
 import '../../../core/components/components.dart';
@@ -52,7 +55,7 @@ class AppCubit extends Cubit<AppState> {
   List<userModel> myFriends = [];
   List<userModel> users = [];
   var massageController = TextEditingController();
-  List<String> lastMessages = [];
+  Map<String, MassageModel> lastMessagesMap = {};
   var commentController = TextEditingController();
   var postTextController = TextEditingController();
   var amountOfLikes = 0;
@@ -71,9 +74,10 @@ class AppCubit extends Cubit<AppState> {
   var amountOfImages = 0;
   var amountOfComments = 0;
   var amountOfPostsShares = 0;
-  bool isLike = false;
-  IconData likeIcon = Icons.favorite_border_outlined;
-  Color likeIconColor = Colors.grey;
+
+  CommentsModel? replyToComment;
+  Map<String, List<CommentsModel>> commentReplies = {};
+
   IconData shareIcon = FlutterIcons.share_ent;
   var nameController = TextEditingController();
   var emailController = TextEditingController();
@@ -81,6 +85,11 @@ class AppCubit extends Cubit<AppState> {
   var avatarController = TextEditingController();
   var dateController = TextEditingController();
   var phoneController = TextEditingController();
+  final AudioRecorder audioRecorder = AudioRecorder();
+  bool isRecording = false;
+  String? audioPath;
+  int recordingDuration = 0;
+  Timer? recordingTimer;
   IconData commentIcon = Icons.mode_comment_outlined;
   List<BottomNavigationBarItem> bottomNavItems = [
     const BottomNavigationBarItem(icon: Icon(FontAwesome.home), label: 'Home'),
@@ -95,15 +104,17 @@ class AppCubit extends Cubit<AppState> {
     ),
   ];
   List<Widget> screens = [Feeds(), Friends(), Chats(), SettingsScreen()];
-  List<String> titles = [
-    'News Feed',
-    'Friends',
-    'Users Nearby',
-    'Messages',
-    'Profile',
-    'Settings',
-  ];
+  List<String> titles = ['News Feed', 'Friends', 'Messages', 'Settings'];
   List<PostsModel> posts = [];
+
+  List<userModel> searchResult = [];
+
+  void search(String text) {
+    searchResult = users.where((element) {
+      return element.name!.toLowerCase().contains(text.toLowerCase());
+    }).toList();
+    emit(SearchState());
+  }
 
   void changeBottomNavBar(int index) {
     if (index == 4) {
@@ -193,6 +204,7 @@ class AppCubit extends Cubit<AppState> {
             .doc(model!.uId)
             .update({'avatar': imageUrl, 'gallery': galleryPaths})
             .then((value) {
+              updateUserPostsData(avatar: imageUrl);
               getUserData(model!.uId);
               emit(UploadProfileImageSuccessState());
             })
@@ -265,7 +277,6 @@ class AppCubit extends Cubit<AppState> {
     String? bio,
     String? avatar,
     String? date,
-    String? postId,
     String? phone,
     String? coverImage,
   }) {
@@ -282,20 +293,33 @@ class AppCubit extends Cubit<AppState> {
           'coverImage': coverImage ?? model!.coverImage,
         })
         .then((value) {
+          updateUserPostsData(
+            name: name ?? model!.name,
+            avatar: avatar ?? model!.image,
+          );
           getUserData(model!.uId);
-          FirebaseFirestore.instance
-              .collection('posts')
-              .doc(postId)
-              .update({
-                'name': name ?? model!.name,
-                'avatar': avatar ?? model!.image,
-              })
-              .then((value) {})
-              .catchError((error) {});
           emit(UpdateUserDataSuccessState());
         })
         .catchError((error) {
           emit(UpdateUserDataErrorState(error.toString()));
+        });
+  }
+
+  void updateUserPostsData({String? name, String? avatar}) {
+    FirebaseFirestore.instance
+        .collection('posts')
+        .where('uId', isEqualTo: model!.uId)
+        .get()
+        .then((value) {
+          value.docs.forEach((element) {
+            element.reference.update({
+              'name': name ?? model!.name,
+              'image': avatar ?? model!.image,
+            });
+          });
+        })
+        .catchError((error) {
+          print(error.toString());
         });
   }
 
@@ -347,13 +371,36 @@ class AppCubit extends Cubit<AppState> {
     emit(GetPostsLoadingState());
     FirebaseFirestore.instance
         .collection('posts')
-        .orderBy('dateTime')
+        .orderBy('dateTime', descending: true)
         .snapshots()
         .listen((event) {
-          posts.clear();
-          event.docs.forEach((element) {
-            posts.add(PostsModel.fromJson(element.data()));
-          });
+          posts = [];
+          for (var element in event.docs) {
+            var post = PostsModel.fromJson(element.data());
+            posts.add(post);
+
+            // Check if the current user has liked this post
+            String? currentUid = model?.uId ?? uId;
+            if (currentUid != null && currentUid.isNotEmpty) {
+              FirebaseFirestore.instance
+                  .collection('posts')
+                  .doc(post.postId)
+                  .collection('likes')
+                  .doc(currentUid)
+                  .get()
+                  .then((value) {
+                    if (value.exists) {
+                      post.isLiked = true;
+                    } else {
+                      post.isLiked = false;
+                    }
+                    emit(GetPostsSuccessState());
+                  })
+                  .catchError((error) {
+                    print('Error checking like: $error');
+                  });
+            }
+          }
           emit(GetPostsSuccessState());
         })
         .onError((error) {
@@ -371,7 +418,9 @@ class AppCubit extends Cubit<AppState> {
         .then((value) {
           postComments.clear();
           value.docs.forEach((element) {
-            postComments.add(CommentsModel.fromJson(element.data()));
+            var comment = CommentsModel.fromJson(element.data());
+            comment.commentId = element.id;
+            postComments.add(comment);
           });
           print(postComments);
           emit(GetPostCommentsSuccessState());
@@ -457,6 +506,7 @@ class AppCubit extends Cubit<AppState> {
         .doc(current.uid)
         .update(data)
         .then((value) {
+          updateUserPostsData(name: data['name'], avatar: data['avatar']);
           getUserData(current.uid);
           emit(UpdateUserDataSuccessState());
         })
@@ -518,24 +568,26 @@ class AppCubit extends Cubit<AppState> {
 
   void getUsers() {
     emit(GetAllUsersLoadingState());
-    if (users.isEmpty) {
-      FirebaseFirestore.instance
-          .collection('users')
-          .get()
-          .then((value) {
-            users.clear();
-            value.docs.forEach((element) {
-              if (element.id != model!.uId) {
-                users.add(userModel.fromJson(element.data()));
-              }
-            });
-            getFriends();
-            emit(GetAllUsersSuccessState());
-          })
-          .catchError((error) {
-            emit(GetAllUsersErrorState(error.toString()));
+    FirebaseFirestore.instance
+        .collection('users')
+        .get()
+        .then((value) {
+          users = [];
+          value.docs.forEach((element) {
+            if (element.id != (model?.uId ?? uId)) {
+              users.add(userModel.fromJson(element.data()));
+            }
           });
-    }
+          String? currentUid = model?.uId ?? uId;
+          if (currentUid != null && currentUid.isNotEmpty) {
+            getFriends();
+            getAllLastMessages();
+          }
+          emit(GetAllUsersSuccessState());
+        })
+        .catchError((error) {
+          emit(GetAllUsersErrorState(error.toString()));
+        });
   }
 
   void changeLikeState({String? postId, String? userId}) {
@@ -549,8 +601,32 @@ class AppCubit extends Cubit<AppState> {
 
     if (post.isLiked!) {
       post.amountOfLikes = (post.amountOfLikes ?? 0) + 1;
+      FirebaseFirestore.instance
+          .collection('posts')
+          .doc(postId)
+          .collection('likes')
+          .doc(userId)
+          .set({'like': true})
+          .then((value) {
+            emit(LikeChangeState());
+          })
+          .catchError((error) {
+            print(error.toString());
+          });
     } else {
       post.amountOfLikes = (post.amountOfLikes ?? 0) - 1;
+      FirebaseFirestore.instance
+          .collection('posts')
+          .doc(postId)
+          .collection('likes')
+          .doc(userId)
+          .delete()
+          .then((value) {
+            emit(LikeChangeState());
+          })
+          .catchError((error) {
+            print(error.toString());
+          });
     }
 
     emit(LikeChangeState());
@@ -558,10 +634,9 @@ class AppCubit extends Cubit<AppState> {
     FirebaseFirestore.instance
         .collection('posts')
         .doc(postId)
-        .update({'isLiked': post.isLiked, 'amountOfLikes': post.amountOfLikes})
+        .update({'amountOfLikes': post.amountOfLikes})
         .catchError((error) {
-          print('Error updating like: $error');
-          // Not reverting for simplicity, but in a real app you might want to.
+          print('Error updating like count: $error');
         });
   }
 
@@ -579,36 +654,114 @@ class AppCubit extends Cubit<AppState> {
   }
 
   void createComment({String? postId, String? commentText}) {
+    if (commentText == null || commentText.trim().isEmpty) return;
     emit(CreateCommentLoadingState());
-    final postIndex = posts.indexWhere((p) => p.postId == postId);
-    if (postIndex == -1) {
-      return;
-    }
 
-    final post = posts[postIndex];
-    FirebaseFirestore.instance
+    DocumentReference commentRef = FirebaseFirestore.instance
         .collection('posts')
         .doc(postId)
         .collection('comments')
-        .add({
-          'userId': model!.uId,
-          'userName': model!.name,
-          'userImage': model!.image,
-          'postId': postId,
-          'commentText': commentText,
-          'amountOfLikes': 0,
-          'amountOfReplies': 0,
-          'isLiked': false,
-        })
+        .doc();
+
+    CommentsModel newComment = CommentsModel(
+      userId: model!.uId,
+      userName: model!.name,
+      userImage: model!.image,
+      postId: postId,
+      commentText: commentText,
+      amountOfLikes: 0,
+      amountOfReplies: 0,
+      isLiked: false,
+      commentId: commentRef.id,
+    );
+
+    commentRef
+        .set(newComment.toMap())
         .then((value) {
-          value.get().then((value) {
-            postComments.add(CommentsModel.fromJson(value.data()!));
-          });
+          postComments.add(newComment);
           changeCommentState(postId: postId);
           emit(CreateCommentSuccessState());
         })
         .catchError((error) {
           emit(CreateCommentErrorState(error.toString()));
+        });
+  }
+
+  void setReplyTo(CommentsModel? comment) {
+    replyToComment = comment;
+    emit(ChangeReplyToState());
+  }
+
+  void createReply({
+    required String postId,
+    required String commentId,
+    required String replyText,
+  }) {
+    if (replyText.trim().isEmpty) return;
+    emit(CreateReplyLoadingState());
+
+    DocumentReference replyRef = FirebaseFirestore.instance
+        .collection('posts')
+        .doc(postId)
+        .collection('comments')
+        .doc(commentId)
+        .collection('replies')
+        .doc();
+
+    CommentsModel newReply = CommentsModel(
+      userId: model!.uId,
+      userName: model!.name,
+      userImage: model!.image,
+      postId: postId,
+      commentText: replyText,
+      amountOfLikes: 0,
+      amountOfReplies: 0,
+      isLiked: false,
+      commentId: replyRef.id,
+    );
+
+    replyRef
+        .set(newReply.toMap())
+        .then((value) {
+          FirebaseFirestore.instance
+              .collection('posts')
+              .doc(postId)
+              .collection('comments')
+              .doc(commentId)
+              .update({'amountOfReplies': FieldValue.increment(1)});
+
+          if (commentReplies[commentId] == null) {
+            commentReplies[commentId] = [];
+          }
+          commentReplies[commentId]!.add(newReply);
+
+          emit(CreateReplySuccessState());
+        })
+        .catchError((error) {
+          emit(CreateReplyErrorState(error.toString()));
+        });
+  }
+
+  void getReplies({required String postId, required String commentId}) {
+    emit(GetRepliesLoadingState());
+    FirebaseFirestore.instance
+        .collection('posts')
+        .doc(postId)
+        .collection('comments')
+        .doc(commentId)
+        .collection('replies')
+        .get()
+        .then((value) {
+          commentReplies[commentId] = [];
+          value.docs.forEach((element) {
+            var reply = CommentsModel.fromJson(element.data());
+            reply.commentId = element.id;
+            commentReplies[commentId]!.add(reply);
+          });
+          emit(GetRepliesSuccessState());
+        })
+        .catchError((error) {
+          emit(GetRepliesErrorState(error.toString()));
         });
   }
 
@@ -639,26 +792,41 @@ class AppCubit extends Cubit<AppState> {
   }
 
   void getFriends() {
+    String? currentUid = model?.uId ?? uId;
+    if (currentUid == null || currentUid.isEmpty) {
+      emit(GetFriendsErrorState("User ID is null or empty"));
+      return;
+    }
     emit(GetFriendsLoadingState());
     FirebaseFirestore.instance
         .collection('users')
-        .doc(model?.uId ?? uId)
+        .doc(currentUid)
         .collection('friends')
         .get()
         .then((value) {
           myFriends = [];
-          value.docs.forEach((doc) {
+          if (value.docs.isEmpty) {
+            emit(GetFriendsSuccessState());
+            return;
+          }
+          List<Future> futures = [];
+          for (var doc in value.docs) {
             String friendId = doc.id;
-            // Try to find the friend in the users list
-            final friend = users.firstWhere(
-              (element) => element.uId == friendId,
-              orElse: () => userModel(isEmailVerified: false),
+            futures.add(
+              FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(friendId)
+                  .get()
+                  .then((userDoc) {
+                    if (userDoc.exists && userDoc.data() != null) {
+                      myFriends.add(userModel.fromJson(userDoc.data()!));
+                    }
+                  }),
             );
-            if (friend.uId != null) {
-              myFriends.add(friend);
-            }
+          }
+          Future.wait(futures).then((_) {
+            emit(GetFriendsSuccessState());
           });
-          emit(GetFriendsSuccessState());
         })
         .catchError((error) {
           emit(GetFriendsErrorState(error.toString()));
@@ -666,13 +834,16 @@ class AppCubit extends Cubit<AppState> {
   }
 
   void addFriend(String? friendId) {
+    String? currentUid = model?.uId ?? uId;
+    if (currentUid == null || currentUid.isEmpty) return;
+
     if (myFriends.any((element) => element.uId == friendId)) {
       return;
     }
     emit(AddFriendLoadingState());
     FirebaseFirestore.instance
         .collection('users')
-        .doc(model!.uId)
+        .doc(currentUid)
         .collection('friends')
         .doc(friendId)
         .set({'friendId': friendId})
@@ -682,16 +853,20 @@ class AppCubit extends Cubit<AppState> {
             orElse: () => userModel(isEmailVerified: false),
           );
 
-          if (friend.uId != null) {
-            myFriends.add(friend);
+          if (myFriends.contains(friend)) {
+            return;
+          } else {
+            if (friend.uId != null) {
+              myFriends.add(friend);
+            }
           }
 
           FirebaseFirestore.instance
               .collection('users')
               .doc(friendId)
               .collection('friends')
-              .doc(model!.uId)
-              .set({'friendId': model!.uId});
+              .doc(currentUid)
+              .set({'friendId': currentUid});
 
           emit(AddFriendSuccessState());
         })
@@ -701,10 +876,13 @@ class AppCubit extends Cubit<AppState> {
   }
 
   void removeFriend(String? friendId) {
+    String? currentUid = model?.uId ?? uId;
+    if (currentUid == null || currentUid.isEmpty) return;
+
     emit(RemoveFriendLoadingState());
     FirebaseFirestore.instance
         .collection('users')
-        .doc(model!.uId)
+        .doc(currentUid)
         .collection('friends')
         .doc(friendId)
         .delete()
@@ -716,7 +894,7 @@ class AppCubit extends Cubit<AppState> {
                   .collection('users')
                   .doc(friendId)
                   .collection('friends')
-                  .doc(model!.uId)
+                  .doc(currentUid)
                   .delete();
             }
           });
@@ -734,13 +912,25 @@ class AppCubit extends Cubit<AppState> {
     navigateTo(context, CommentsScreen());
   }
 
-  void sendMassage({String? massageReceiverId, String? massageText}) {
+  void sendMassage({
+    String? massageReceiverId,
+    String? massageText,
+    String? voiceMassage,
+  }) {
+    bool isTextEmpty = massageText == null || massageText.trim().isEmpty;
+    bool isVoiceEmpty = voiceMassage == null || voiceMassage.isEmpty;
+
+    if (isTextEmpty && isVoiceEmpty) {
+      print('Attempted to send empty message - returning');
+      return;
+    }
     emit(SendMessageLoadingState());
     MassageModel massageModel = MassageModel(
       massageText: massageText,
       massageSenderId: model!.uId,
       massageReceiverId: massageReceiverId,
       massageDate: DateTime.now().toString(),
+      voiceMassage: voiceMassage,
     );
     FirebaseFirestore.instance
         .collection('users')
@@ -771,10 +961,15 @@ class AppCubit extends Cubit<AppState> {
   }
 
   void getMassages({String? massageReceiverId}) {
+    String? currentUid = model?.uId ?? uId;
+    if (currentUid == null || currentUid.isEmpty) {
+      emit(GetMessagesErrorState("User ID is null or empty"));
+      return;
+    }
     emit(GetMessagesLoadingState());
     FirebaseFirestore.instance
         .collection('users')
-        .doc(model!.uId)
+        .doc(currentUid)
         .collection('chats')
         .doc(massageReceiverId)
         .collection('messages')
@@ -785,9 +980,152 @@ class AppCubit extends Cubit<AppState> {
           event.docs.forEach((element) {
             massageModel = MassageModel.fromJson(element.data());
             massages.add(massageModel!);
-            lastMessages.add(massageModel!.massageText!);
           });
+          if (massages.isNotEmpty && massageReceiverId != null) {
+            lastMessagesMap[massageReceiverId] = massages.last;
+          }
           emit(GetMessagesSuccessState());
         });
+  }
+
+  void getAllLastMessages() {
+    String? currentUid = model?.uId ?? uId;
+    if (currentUid == null || currentUid.isEmpty) return;
+
+    users.forEach((user) {
+      FirebaseFirestore.instance
+          .collection('users')
+          .doc(currentUid)
+          .collection('chats')
+          .doc(user.uId)
+          .collection('messages')
+          .orderBy('massageDate', descending: true)
+          .limit(1)
+          .get()
+          .then((value) {
+            if (value.docs.isNotEmpty) {
+              lastMessagesMap[user.uId!] = MassageModel.fromJson(
+                value.docs.first.data(),
+              );
+              emit(GetLastMessagesSuccessState());
+            }
+          });
+    });
+  }
+
+  Future<void> startRecording() async {
+    if (isRecording) return;
+    try {
+      if (await audioRecorder.hasPermission()) {
+        final Directory appDocDir = await getApplicationDocumentsDirectory();
+        final String path =
+            '${appDocDir.path}/recording_${DateTime.now().millisecondsSinceEpoch}.m4a';
+
+        const config = RecordConfig();
+
+        print('Starting recording at: $path');
+        await audioRecorder.start(config, path: path);
+        isRecording = true;
+        audioPath = path;
+        recordingDuration = 0;
+        recordingTimer = Timer.periodic(Duration(seconds: 1), (timer) {
+          recordingDuration++;
+          emit(RecordingTimerUpdateState());
+        });
+        emit(StartRecordingState());
+      } else {
+        emit(UploadVoiceMessageErrorState('Audio recording permission denied'));
+      }
+    } catch (e) {
+      print('Error starting recording: $e');
+      emit(UploadVoiceMessageErrorState('Failed to start recording: $e'));
+    }
+  }
+
+  Future<void> stopRecording({required String receiverId}) async {
+    if (!isRecording) return;
+    try {
+      print('Stopping recording for receiver: $receiverId');
+      final path = await audioRecorder.stop();
+      isRecording = false;
+      recordingTimer?.cancel();
+      emit(StopRecordingState());
+      if (path != null) {
+        File audioFile = File(path);
+        if (await audioFile.exists()) {
+          final stats = await audioFile.stat();
+          print('Recording stopped. File size: ${stats.size} bytes');
+
+          if (stats.size < 100) {
+            print('Recording file too small, discarding');
+            return;
+          }
+
+          uploadVoiceMessage(audioFile: audioFile, receiverId: receiverId);
+        } else {
+          print('Audio file does not exist at path: $path');
+          showToast(
+            text: 'Error: Recording file not found',
+            state: ToastStates.ERROR,
+          );
+        }
+      } else {
+        print('audioRecorder.stop() returned null');
+      }
+      recordingDuration = 0;
+    } catch (e) {
+      isRecording = false;
+      recordingTimer?.cancel();
+      recordingDuration = 0;
+      print('Error stopping recording: $e');
+      emit(UploadVoiceMessageErrorState('Failed to stop recording: $e'));
+    }
+  }
+
+  Future<void> uploadVoiceMessage({
+    required File audioFile,
+    required String receiverId,
+  }) async {
+    if (receiverId.isEmpty) {
+      print('Receiver ID is empty');
+      return;
+    }
+    emit(UploadVoiceMessageLoadingState());
+
+    // Use FirebaseAuth UID, or fallback to the loaded model UID
+    final String? currentUid = auth.currentUser?.uid ?? model?.uId;
+
+    if (currentUid == null || currentUid.isEmpty) {
+      emit(
+        UploadVoiceMessageErrorState('User not logged in or session expired'),
+      );
+      return;
+    }
+
+    try {
+      final SupabaseClient supabaseClient = Supabase.instance.client;
+      final String voicePath =
+          'users/$currentUid/voices/voice_${DateTime.now().microsecondsSinceEpoch}.m4a';
+
+      print('Uploading voice to Supabase: $voicePath');
+      await supabaseClient.storage
+          .from('images')
+          .upload(
+            voicePath,
+            audioFile,
+            fileOptions: const FileOptions(contentType: 'audio/x-m4a'),
+          );
+      final String voiceUrl = supabaseClient.storage
+          .from('images')
+          .getPublicUrl(voicePath);
+
+      print('Voice uploaded, sending message to: $receiverId');
+      sendMassage(massageReceiverId: receiverId, voiceMassage: voiceUrl);
+      emit(UploadVoiceMessageSuccessState());
+      showToast(text: 'Voice message sent', state: ToastStates.SUCCESS);
+    } catch (error) {
+      print('Voice upload error details: $error');
+      emit(UploadVoiceMessageErrorState('Upload failed: ${error.toString()}'));
+    }
   }
 }

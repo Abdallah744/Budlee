@@ -1,3 +1,4 @@
+import 'package:budlee_app/core/styles/colors.dart';
 import 'package:budlee_app/core/styles/styles.dart';
 import 'package:flutter/material.dart';
 import 'package:hexcolor/hexcolor.dart';
@@ -8,7 +9,7 @@ ThemeData lightTheme = ThemeData(
     elevation: 0,
     backgroundColor: Colors.purple[50],
     titleTextStyle: TextStyle(
-      color: Colors.deepOrange,
+      color: defaultColor,
       fontSize: appBarTitleFontSize,
       fontWeight: appBarTitleFontWeight,
     ),
@@ -16,9 +17,9 @@ ThemeData lightTheme = ThemeData(
   scaffoldBackgroundColor: Colors.purple[50],
   bottomNavigationBarTheme: BottomNavigationBarThemeData(
     type: BottomNavigationBarType.fixed,
-    selectedItemColor: Colors.deepOrange[600],
+    selectedItemColor: defaultColor,
     unselectedItemColor: Colors.blueGrey[600],
-    backgroundColor: Colors.purple[50],
+    backgroundColor: secondaryColor,
     elevation: 20,
   ),
   textTheme: TextTheme(bodyMedium: TextStyle(color: Colors.black87)),

@@ -1,3 +1,5 @@
+// ignore_for_file: unused_import
+
 import 'dart:io';
 
 import 'package:budlee_app/core/components/components.dart';
@@ -24,15 +26,11 @@ class HomeScreen extends StatelessWidget {
         // Determine the backgroundImage for the CircleAvatar
         ImageProvider? backgroundImage;
         if (cubit.model != null) {
-          if (cubit.model!.profileImageFile != null) {
+          if (cubit.model!.profileImageFile != null &&
+              cubit.model!.profileImageFile!.existsSync()) {
             backgroundImage = FileImage(cubit.model!.profileImageFile!);
-          } else if (cubit.model!.image != null &&
-              cubit.model!.image!.toString().isNotEmpty) {
-            if (cubit.model!.image!.toString().startsWith('http')) {
-              backgroundImage = NetworkImage(cubit.model!.image!.toString());
-            } else {
-              backgroundImage = FileImage(File(cubit.model!.image!.toString()));
-            }
+          } else {
+            backgroundImage = customImageProvider(cubit.model!.image);
           }
         }
 
@@ -62,14 +60,14 @@ class HomeScreen extends StatelessWidget {
                 onPressed: () {
                   navigateTo(context, SearchPage());
                 },
-                icon: Icon(Icons.search),
+                icon: Icon(Icons.search, size: 30),
               ),
-              IconButton(
-                onPressed: () {
-                  navigateTo(context, NotificationsPage());
-                },
-                icon: Icon(Icons.notifications),
-              ),
+              // IconButton(
+              //   onPressed: () {
+              //     navigateTo(context, NotificationsPage());
+              //   },
+              //   icon: Icon(Icons.notifications),
+              // ),
             ],
           ),
           // The body no longer needs ConditionalBuilder for the cubit.model check,

@@ -1,15 +1,14 @@
 // ignore_for_file: use_key_in_widget_constructors
 
+import 'package:budlee_app/config/cubit/register/register_cubit.dart';
+import 'package:budlee_app/config/cubit/register/register_states.dart';
 import 'package:budlee_app/config/user/login_and_register/login_screen.dart';
+import 'package:budlee_app/core/components/components.dart';
 import 'package:budlee_app/core/constants/constants.dart';
+import 'package:budlee_app/core/styles/colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
-
-import 'package:budlee_app/config/cubit/register/register_cubit.dart';
-import 'package:budlee_app/config/cubit/register/register_states.dart';
-import 'package:budlee_app/core/components/components.dart';
-import 'package:budlee_app/core/styles/colors.dart';
 
 class RegisterScreen extends StatelessWidget {
   @override
@@ -287,6 +286,55 @@ class RegisterScreen extends StatelessWidget {
                         background: secondaryColor,
                         text: 'Create Account',
                       ),
+                      SizedBox(height: 20.0),
+                      Center(
+                        child: Text(
+                          'OR REGISTER WITH',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey[700],
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: 20.0),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          InkWell(
+                            onTap: () {
+                              cubit.registerWithGoogle();
+                            },
+                            child: CircleAvatar(
+                              radius: 25,
+                              backgroundColor: Colors.white,
+                              child: Image(
+                                image: NetworkImage(
+                                  'https://cdn1.iconfinder.com/data/icons/google-s-logo/150/Google_Icons-09-512.png',
+                                ),
+                                width: 35,
+                                height: 35,
+                              ),
+                            ),
+                          ),
+                          SizedBox(width: 20),
+                          InkWell(
+                            onTap: () {
+                              cubit.registerWithFacebook();
+                            },
+                            child: CircleAvatar(
+                              radius: 25,
+                              backgroundColor: Colors.white,
+                              child: Icon(
+                                Icons.facebook,
+                                color: Colors.blue[900],
+                                size: 40,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 20.0),
                     ],
                   ),
                 ),

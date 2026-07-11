@@ -1,9 +1,10 @@
+// ignore_for_file: unused_local_variable
+
 import 'dart:io';
 
 import 'package:conditional_builder_null_safety/conditional_builder_null_safety.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:http/http.dart';
 
 import '../../../config/cubit/app_cubit/app_cubit.dart';
 import '../../../config/cubit/app_cubit/app_states.dart';
@@ -27,67 +28,101 @@ class CommentsScreen extends StatelessWidget {
         var cubit = AppCubit.get(context);
         return Scaffold(
           appBar: AppBar(),
-          body: Column(
-            children: [
-              postItemBuilder(
-                index: cubit.index,
-                post,
-                context,
-                onTap: () {},
-                userId: cubit.model!.uId.toString(),
-                followingState: 'Follow',
-                postModel: cubit.posts[cubit.index],
-                profileImageUrl: cubit.posts[cubit.index].image?.toString(),
-                likeIcon: cubit.likeIcon,
-                likeIconColor: cubit.likeIconColor,
-              ),
-              Expanded(
-                child: SingleChildScrollView(
-                  physics: BouncingScrollPhysics(),
-                  child: ConditionalBuilder(
-                    condition: cubit.postComments.isNotEmpty,
-                    builder: (context) => ListView.separated(
-                      itemBuilder: (context, index) => commentItemBuilder(
-                        cubit.postComments[index],
-                        context,
-                        index: index,
-                      ),
-                      separatorBuilder: (context, index) => myDivider(),
-                      itemCount: cubit.postComments.length,
-                      shrinkWrap: true,
-                      physics: NeverScrollableScrollPhysics(),
+          body: cubit.model == null
+              ? Center(child: CircularProgressIndicator())
+              : Column(
+                  children: [
+                    postItemBuilder(
+                      index: cubit.index,
+                      cubit.posts[cubit.index],
+                      context,
+                      onTap: () {},
+                      userId: cubit.model!.uId.toString(),
+                      followingState: 'Follow',
+                      postModel: cubit.posts[cubit.index],
+                      profileImageUrl: cubit.posts[cubit.index].image
+                          ?.toString(),
                     ),
-                    fallback: (context) =>
-                        Center(child: CircularProgressIndicator()),
-                  ),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        physics: BouncingScrollPhysics(),
+                        child: ConditionalBuilder(
+                          condition: cubit.postComments.isNotEmpty,
+                          builder: (context) => ListView.separated(
+                            itemBuilder: (context, index) => commentItemBuilder(
+                              cubit.postComments[index],
+                              context,
+                              index: index,
+                            ),
+                            separatorBuilder: (context, index) => myDivider(),
+                            itemCount: cubit.postComments.length,
+                            shrinkWrap: true,
+                            physics: NeverScrollableScrollPhysics(),
+                          ),
+                          fallback: (context) =>
+                              Center(child: CircularProgressIndicator()),
+                        ),
+                      ),
+                    ),
+                    if (cubit.replyToComment != null)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 10.0),
+                        child: Row(
+                          children: [
+                            Text(
+                              'Replying to ${cubit.replyToComment!.userName}',
+                              style: TextStyle(
+                                color: Colors.grey,
+                                fontSize: 12,
+                              ),
+                            ),
+                            Spacer(),
+                            IconButton(
+                              onPressed: () {
+                                cubit.setReplyTo(null);
+                              },
+                              icon: Icon(Icons.close, size: 16),
+                              padding: EdgeInsets.zero,
+                              constraints: BoxConstraints(),
+                            ),
+                          ],
+                        ),
+                      ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: cubit.commentController,
+                            decoration: InputDecoration(
+                              hintText: cubit.replyToComment == null
+                                  ? 'Write a comment...'
+                                  : 'Write a reply...',
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () {
+                            if (cubit.replyToComment == null) {
+                              cubit.createComment(
+                                postId: cubit.posts[cubit.index].postId,
+                                commentText: cubit.commentController.text,
+                              );
+                            } else {
+                              cubit.createReply(
+                                postId: cubit.posts[cubit.index].postId!,
+                                commentId: cubit.replyToComment!.commentId!,
+                                replyText: cubit.commentController.text,
+                              );
+                              cubit.setReplyTo(null);
+                            }
+                            cubit.commentController.clear();
+                          },
+                          icon: Icon(Icons.send),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-              ),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: cubit.commentController,
-                      decoration: InputDecoration(
-                        hintText: 'Write a comment...',
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () {
-                      // cubit.getPostComments(cubit.posts[cubit.index].postId!);
-                      cubit.createComment(
-                        postId: cubit.posts[cubit.index].postId,
-                        commentText: cubit.commentController.text,
-                      );
-                      cubit.changeCommentState();
-                      cubit.commentController.clear();
-                    },
-                    icon: Icon(Icons.send),
-                  ),
-                ],
-              ),
-            ],
-          ),
         );
       },
     );
@@ -102,17 +137,16 @@ class CommentsScreen extends StatelessWidget {
     PostsModel? postModel,
     required String followingState,
     required Function onTap,
-    required var likeIcon,
-    required var likeIconColor,
   }) {
     // Determine the backgroundImage for the CircleAvatar
     var cubit = AppCubit.get(context);
+    ImageProvider? commentUserImageProvider;
     if (cubit.model != null) {
-      if (cubit.model!.profileImageFile != null) {
-      } else if (cubit.model!.image != null &&
-          cubit.model!.image!.toString().isNotEmpty) {
-        if (cubit.model!.image!.toString().startsWith('http')) {
-        } else {}
+      if (cubit.model!.profileImageFile != null &&
+          cubit.model!.profileImageFile!.existsSync()) {
+        commentUserImageProvider = FileImage(cubit.model!.profileImageFile!);
+      } else {
+        commentUserImageProvider = customImageProvider(cubit.model!.image);
       }
     }
 
@@ -129,11 +163,7 @@ class CommentsScreen extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 21,
-                  backgroundImage: profileImageUrl != null
-                      ? (profileImageUrl.startsWith('http')
-                            ? NetworkImage(profileImageUrl)
-                            : FileImage(File(profileImageUrl)) as ImageProvider)
-                      : null,
+                  backgroundImage: customImageProvider(profileImageUrl),
                 ),
                 SizedBox(width: 15),
                 Expanded(
@@ -242,7 +272,15 @@ class CommentsScreen extends StatelessWidget {
                       userId: cubit.model!.uId,
                     );
                   },
-                  child: Icon(likeIcon, size: 20, color: likeIconColor),
+                  child: Icon(
+                    postModel?.isLiked == true
+                        ? Icons.favorite
+                        : Icons.favorite_border_outlined,
+                    size: 20,
+                    color: postModel?.isLiked == true
+                        ? Colors.red
+                        : Colors.grey,
+                  ),
                 ),
                 Spacer(),
                 Text(
@@ -299,34 +337,94 @@ class CommentsScreen extends StatelessWidget {
                     height: 1.4,
                   ),
                 ),
-                SizedBox(height: 20),
+                SizedBox(height: 5),
                 Text(
                   comment.commentText.toString(),
                   style: TextStyle(
-                    fontSize: 18,
+                    fontSize: 15,
                     color: Colors.black,
                     height: 1.4,
                   ),
                 ),
+                if (comment.amountOfReplies != null &&
+                    comment.amountOfReplies! > 0)
+                  InkWell(
+                    onTap: () {
+                      cubit.getReplies(
+                        postId: comment.postId!,
+                        commentId: comment.commentId!,
+                      );
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 5.0),
+                      child: Text(
+                        'View ${comment.amountOfReplies} replies',
+                        style: TextStyle(color: Colors.grey, fontSize: 13),
+                      ),
+                    ),
+                  ),
+                if (cubit.commentReplies[comment.commentId] != null)
+                  ListView.builder(
+                    shrinkWrap: true,
+                    physics: NeverScrollableScrollPhysics(),
+                    itemBuilder: (context, index) => replyItemBuilder(
+                      cubit.commentReplies[comment.commentId]![index],
+                      context,
+                    ),
+                    itemCount: cubit.commentReplies[comment.commentId]!.length,
+                  ),
               ],
             ),
           ),
+          Column(
+            children: [
+              IconButton(
+                onPressed: () {},
+                icon: Icon(Icons.thumb_up_alt_outlined, size: 18),
+                padding: EdgeInsets.zero,
+                constraints: BoxConstraints(),
+              ),
+              IconButton(
+                onPressed: () {
+                  cubit.setReplyTo(comment);
+                },
+                icon: Icon(Icons.chat_bubble_outline, size: 18),
+                padding: EdgeInsets.zero,
+                constraints: BoxConstraints(),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget replyItemBuilder(CommentsModel reply, context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CircleAvatar(
+            radius: 15,
+            backgroundImage: customImageProvider(reply.userImage),
+          ),
+          SizedBox(width: 10),
           Expanded(
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      onPressed: () {},
-                      icon: Icon(Icons.thumb_up_alt_outlined),
-                    ),
-                    IconButton(
-                      onPressed: () {},
-                      icon: Icon(Icons.chat_bubble_outline),
-                    ),
-                  ],
+                Text(
+                  reply.userName.toString(),
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
+                ),
+                Text(
+                  reply.commentText.toString(),
+                  style: TextStyle(fontSize: 13, color: Colors.black),
                 ),
               ],
             ),

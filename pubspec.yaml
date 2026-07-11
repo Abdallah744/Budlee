@@ -68,6 +68,13 @@ dependencies:
   geolocator: ^14.0.2
   google_maps_flutter: ^2.13.1
   supabase_flutter: ^2.16.0
+  google_sign_in: ^6.2.1
+  flutter_facebook_auth: ^7.1.1
+  record: 5.1.0
+  audioplayers: ^6.1.1
+
+dependency_overrides:
+  record_platform_interface: 1.1.0
 
 dev_dependencies:
   flutter_test:

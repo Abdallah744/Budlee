@@ -43,8 +43,12 @@ void main() async {
     publishableKey: 'sb_publishable_K6vHM1dGaos_G_W5lMkEzA_D7NGvS_4',
   );
 
-  var token = await FirebaseMessaging.instance.getToken();
-  print("Token: $token");
+  try {
+    var token = await FirebaseMessaging.instance.getToken();
+    print("Token: $token");
+  } catch (e) {
+    print("Firebase Messaging Error: $e");
+  }
   FirebaseMessaging.onMessage.listen((event) {
     print(event.data.toString());
     print('onMessage: $event');

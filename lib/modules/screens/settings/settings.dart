@@ -81,20 +81,10 @@ class SettingsScreen extends StatelessWidget {
                               topRight: Radius.circular(6),
                             ),
                             image: DecorationImage(
-                              image: model.coverImageFile == null
-                                  ? (model.coverImage.toString().startsWith(
-                                          'http',
-                                        )
-                                        ? NetworkImage(
-                                            model.coverImage.toString(),
-                                          )
-                                        : FileImage(
-                                                File(
-                                                  model.coverImage.toString(),
-                                                ),
-                                              )
-                                              as ImageProvider)
-                                  : FileImage(model.coverImageFile!),
+                              image: (model.coverImageFile != null &&
+                                      model.coverImageFile!.existsSync())
+                                  ? FileImage(model.coverImageFile!)
+                                  : customImageProvider(model.coverImage),
                               fit: BoxFit.cover,
                             ),
                           ),
@@ -102,17 +92,14 @@ class SettingsScreen extends StatelessWidget {
                       ),
                       CircleAvatar(
                         radius: 60,
-                        backgroundColor: Theme.of(
-                          context,
-                        ).scaffoldBackgroundColor,
+                        backgroundColor:
+                            Theme.of(context).scaffoldBackgroundColor,
                         child: CircleAvatar(
                           radius: 58,
-                          backgroundImage: model.profileImageFile == null
-                              ? (model.image.toString().startsWith('http')
-                                    ? NetworkImage(model.image.toString())
-                                    : FileImage(File(model.image.toString()))
-                                          as ImageProvider)
-                              : FileImage(model.profileImageFile!),
+                          backgroundImage: (model.profileImageFile != null &&
+                                  model.profileImageFile!.existsSync())
+                              ? FileImage(model.profileImageFile!)
+                              : customImageProvider(model.image),
                         ),
                       ),
                     ],

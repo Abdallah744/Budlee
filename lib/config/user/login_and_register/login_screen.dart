@@ -29,7 +29,7 @@ class Login extends StatelessWidget {
           backgroundColor: Colors.purple[50],
           appBar: AppBar(
             title: Text(
-              'Budlee ;)',
+              'Easy Chat ;)',
               style: TextStyle(
                 color: Colors.blue,
                 fontSize: 25,
@@ -47,7 +47,7 @@ class Login extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    SizedBox(height: 120),
+                    SizedBox(height: 80),
                     Text(
                       'Login',
                       style: TextStyle(
@@ -175,40 +175,53 @@ class Login extends StatelessWidget {
                       ],
                     ),
                     SizedBox(height: 20.0),
-                    // Row(
-                    //   mainAxisAlignment: MainAxisAlignment.center,
-                    //   children: [
-                    //     CircleAvatar(
-                    //       radius: 25,
-                    //       child: Icon(
-                    //         Icons.facebook,
-                    //         color: Colors.blueAccent,
-                    //         size: 50,
-                    //       ),
-                    //     ),
-                    //     SizedBox(width: 10),
-                    //     CircleAvatar(
-                    //       radius: 25,
-                    //       child: Icon(
-                    //         Icons.phone_android_outlined,
-                    //         color: Colors.blueGrey,
-                    //         size: 45,
-                    //       ),
-                    //     ),
-                    //     SizedBox(width: 10),
-                    //     CircleAvatar(
-                    //       radius: 25,
-                    //       child: IconButton(
-                    //         onPressed: (){},
-                    //         icon: Icon(
-                    //           Icons.email_outlined,
-                    //           color: Colors.red[500],
-                    //           size: 45,
-                    //         ),
-                    //       ),
-                    //     ),
-                    //   ],
-                    // ),
+                    Center(
+                      child: Text(
+                        'OR LOGIN WITH',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey[700],
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 20.0),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        InkWell(
+                          onTap: () {
+                            cubit.loginWithGoogle();
+                          },
+                          child: CircleAvatar(
+                            radius: 25,
+                            backgroundColor: Colors.white,
+                            child: Image(
+                              image: NetworkImage(
+                                'https://cdn1.iconfinder.com/data/icons/google-s-logo/150/Google_Icons-09-512.png',
+                              ),
+                              width: 35,
+                              height: 35,
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: 20),
+                        InkWell(
+                          onTap: () {
+                            cubit.loginWithFacebook();
+                          },
+                          child: CircleAvatar(
+                            radius: 25,
+                            backgroundColor: Colors.white,
+                            child: Icon(
+                              Icons.facebook,
+                              color: Colors.blue[900],
+                              size: 40,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),

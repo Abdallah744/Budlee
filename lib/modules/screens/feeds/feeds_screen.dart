@@ -1,3 +1,5 @@
+// ignore_for_file: unused_import
+
 import 'dart:io'; // Added for FileImage
 
 import 'package:conditional_builder_null_safety/conditional_builder_null_safety.dart';
@@ -21,13 +23,8 @@ class Feeds extends StatelessWidget {
         if (cubit.model != null) {
           if (cubit.model!.profileImageFile != null) {
             backgroundImage = FileImage(cubit.model!.profileImageFile!);
-          } else if (cubit.model!.image != null &&
-              cubit.model!.image!.toString().isNotEmpty) {
-            if (cubit.model!.image!.toString().startsWith('http')) {
-              backgroundImage = NetworkImage(cubit.model!.image!.toString());
-            } else {
-              backgroundImage = FileImage(File(cubit.model!.image!.toString()));
-            }
+          } else {
+            backgroundImage = customImageProvider(cubit.model!.image);
           }
         }
 
@@ -109,7 +106,7 @@ class Feeds extends StatelessWidget {
                 ),
               ),
               ConditionalBuilder(
-                condition: cubit.posts.isNotEmpty,
+                condition: cubit.posts.isNotEmpty && cubit.model != null,
                 builder: (context) => ListView.separated(
                   shrinkWrap: true,
                   physics: NeverScrollableScrollPhysics(),
@@ -124,8 +121,6 @@ class Feeds extends StatelessWidget {
                       followingState: 'Follow',
                       postModel: post,
                       profileImageUrl: post.image?.toString(),
-                      likeIcon: cubit.likeIcon,
-                      likeIconColor: cubit.likeIconColor,
                     );
                   },
                   separatorBuilder: (context, index) => SizedBox(height: 8),
@@ -150,26 +145,16 @@ class Feeds extends StatelessWidget {
     PostsModel? postModel,
     required String followingState,
     required Function onTap,
-    required var likeIcon,
-    required var likeIconColor,
   }) {
     // Determine the backgroundImage for the CircleAvatar
     var cubit = AppCubit.get(context);
     ImageProvider? commentUserImageProvider;
     if (cubit.model != null) {
-      if (cubit.model!.profileImageFile != null) {
+      if (cubit.model!.profileImageFile != null &&
+          cubit.model!.profileImageFile!.existsSync()) {
         commentUserImageProvider = FileImage(cubit.model!.profileImageFile!);
-      } else if (cubit.model!.image != null &&
-          cubit.model!.image!.toString().isNotEmpty) {
-        if (cubit.model!.image!.toString().startsWith('http')) {
-          commentUserImageProvider = NetworkImage(
-            cubit.model!.image!.toString(),
-          );
-        } else {
-          commentUserImageProvider = FileImage(
-            File(cubit.model!.image!.toString()),
-          );
-        }
+      } else {
+        commentUserImageProvider = customImageProvider(cubit.model!.image);
       }
     }
 
@@ -186,11 +171,7 @@ class Feeds extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 21,
-                  backgroundImage: profileImageUrl != null
-                      ? (profileImageUrl.startsWith('http')
-                            ? NetworkImage(profileImageUrl)
-                            : FileImage(File(profileImageUrl)) as ImageProvider)
-                      : null,
+                  backgroundImage: customImageProvider(profileImageUrl),
                 ),
                 SizedBox(width: 15),
                 Expanded(
@@ -293,9 +274,7 @@ class Feeds extends StatelessWidget {
                 elevation: 1,
                 margin: EdgeInsets.zero,
                 child: Image(
-                  image: postModel.postImage!.startsWith('http')
-                      ? NetworkImage(postModel.postImage!)
-                      : FileImage(File(postModel.postImage!)) as ImageProvider,
+                  image: customImageProvider(postModel.postImage),
                   fit: BoxFit.fitWidth,
                   height: 200,
                   width: double.infinity,
@@ -320,7 +299,15 @@ class Feeds extends StatelessWidget {
                       userId: cubit.model!.uId,
                     );
                   },
-                  child: Icon(likeIcon, size: 20, color: likeIconColor),
+                  child: Icon(
+                    postModel?.isLiked == true
+                        ? Icons.favorite
+                        : Icons.favorite_border_outlined,
+                    size: 20,
+                    color: postModel?.isLiked == true
+                        ? Colors.red
+                        : Colors.grey,
+                  ),
                 ),
                 Spacer(),
                 Text(

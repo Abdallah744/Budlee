@@ -31,7 +31,6 @@ class PostsModel {
     image = json['image'];
     postId = json['postId'];
     dateTime = json['dateTime'];
-    isLiked = json['isLiked'] ?? false;
     amountOfLikes = json['amountOfLikes'] ?? 0;
     amountOfComments = json['amountOfComments'] ?? 0;
     amountOfShares = json['amountOfShares'] ?? 0;
@@ -46,7 +45,6 @@ class PostsModel {
       'image': image,
       'dateTime': dateTime,
       'postId': postId,
-      'isLiked': isLiked,
       'amountOfLikes': amountOfLikes,
       'amountOfComments': amountOfComments,
       'amountOfShares': amountOfShares,

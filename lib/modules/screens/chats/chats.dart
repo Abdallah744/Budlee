@@ -1,9 +1,11 @@
+// ignore: unused_import
 import 'dart:io';
 
 import 'package:budlee_app/core/components/components.dart';
 import 'package:conditional_builder_null_safety/conditional_builder_null_safety.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
 
 import '../../../config/cubit/app_cubit/app_cubit.dart';
 import '../../../config/cubit/app_cubit/app_states.dart';
@@ -49,13 +51,10 @@ class Chats extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 31,
-                  backgroundImage: cubit.users[index].profileImageFile == null
-                      ? (cubit.users[index].image.toString().startsWith('http')
-                            ? NetworkImage(cubit.users[index].image.toString())
-                            : FileImage(
-                                File(cubit.users[index].image.toString()),
-                              ))
-                      : FileImage(cubit.users[index].profileImageFile!),
+                  backgroundImage: (cubit.users[index].profileImageFile != null &&
+                          cubit.users[index].profileImageFile!.existsSync())
+                      ? FileImage(cubit.users[index].profileImageFile!)
+                      : customImageProvider(cubit.users[index].image),
                 ),
                 Padding(
                   padding: const EdgeInsetsDirectional.only(bottom: 3, end: 3),
@@ -68,28 +67,81 @@ class Chats extends StatelessWidget {
               ],
             ),
             SizedBox(width: 10),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '${cubit.users[index].name}',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight
-                        .bold, // You can adjust the font weight as needed
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        '${cubit.users[index].name}',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Spacer(),
+                      if (cubit.lastMessagesMap.containsKey(
+                            cubit.users[index].uId,
+                          ) &&
+                          cubit
+                                  .lastMessagesMap[cubit.users[index].uId]!
+                                  .massageDate !=
+                              null)
+                        Text(
+                          _getFormattedLastMessageDate(
+                            DateTime.parse(
+                              cubit
+                                  .lastMessagesMap[cubit.users[index].uId]!
+                                  .massageDate!,
+                            ),
+                          ),
+                          style: TextStyle(fontSize: 12, color: Colors.grey),
+                        ),
+                    ],
                   ),
-                ),
-                Text(
-                  cubit.lastMessages.isEmpty
-                      ? 'Start conversation with ${cubit.users[index].name}'
-                      : cubit.lastMessages.last,
-                  style: TextStyle(fontSize: 16, color: Colors.grey),
-                ),
-              ],
+                  Text(
+                    _getLastMessageText(cubit, index),
+                    style: TextStyle(fontSize: 16, color: Colors.grey),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
             ),
           ],
         ),
       ),
     );
+  }
+
+  String _getFormattedLastMessageDate(DateTime date) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+    final messageDate = DateTime(date.year, date.month, date.day);
+
+    if (messageDate == today) {
+      return DateFormat.jm().format(date);
+    } else if (messageDate == yesterday) {
+      return 'Yesterday';
+    } else if (now.difference(date).inDays < 7) {
+      return DateFormat.E().format(date);
+    } else {
+      return DateFormat.yMd().format(date);
+    }
+  }
+
+  String _getLastMessageText(AppCubit cubit, int index) {
+    final userId = cubit.users[index].uId;
+    if (!cubit.lastMessagesMap.containsKey(userId)) {
+      return 'Start conversation with ${cubit.users[index].name}';
+    }
+
+    final lastMsg = cubit.lastMessagesMap[userId]!;
+    if (lastMsg.voiceMassage != null) {
+      return '🎤 Voice message';
+    }
+    return lastMsg.massageText ?? '';
   }
 }

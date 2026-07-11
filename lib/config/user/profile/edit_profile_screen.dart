@@ -84,21 +84,12 @@ class EditProfileScreen extends StatelessWidget {
                                 topRight: Radius.circular(6),
                               ),
                               image: DecorationImage(
-                                image: cubit.model!.coverImageFile == null
-                                    ? (cubit.model!.image.toString().startsWith(
-                                            'http',
-                                          )
-                                          ? NetworkImage(
-                                              cubit.model!.coverImage
-                                                  .toString(),
-                                            )
-                                          : FileImage(
-                                              File(
-                                                cubit.model!.coverImage
-                                                    .toString(),
-                                              ),
-                                            ))
-                                    : FileImage(cubit.model!.coverImageFile!),
+                                image: (cubit.model!.coverImageFile != null &&
+                                        cubit.model!.coverImageFile!
+                                            .existsSync())
+                                    ? FileImage(cubit.model!.coverImageFile!)
+                                    : customImageProvider(
+                                        cubit.model!.coverImage),
                                 fit: BoxFit.cover,
                               ),
                             ),
@@ -107,26 +98,19 @@ class EditProfileScreen extends StatelessWidget {
                       ),
                       CircleAvatar(
                         radius: 60,
-                        backgroundColor: Theme.of(
-                          context,
-                        ).scaffoldBackgroundColor,
+                        backgroundColor:
+                            Theme.of(context).scaffoldBackgroundColor,
                         child: Stack(
                           alignment: AlignmentDirectional.bottomEnd,
                           children: [
                             CircleAvatar(
                               radius: 58,
-                              backgroundImage:
-                                  cubit.model!.profileImageFile == null
-                                  ? (cubit.model!.image.toString().startsWith(
-                                          'http',
-                                        )
-                                        ? NetworkImage(
-                                            cubit.model!.image.toString(),
-                                          )
-                                        : FileImage(
-                                            File(cubit.model!.image.toString()),
-                                          ))
-                                  : FileImage(cubit.model!.profileImageFile!),
+                              backgroundImage: (cubit.model!.profileImageFile !=
+                                          null &&
+                                      cubit.model!.profileImageFile!
+                                          .existsSync())
+                                  ? FileImage(cubit.model!.profileImageFile!)
+                                  : customImageProvider(cubit.model!.image),
                             ),
                             IconButton(
                               onPressed: () {

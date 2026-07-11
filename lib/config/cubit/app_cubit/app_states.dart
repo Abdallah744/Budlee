@@ -72,6 +72,26 @@ class GetPostCommentsErrorState extends AppState {
   GetPostCommentsErrorState(this.error);
 }
 
+class CreateReplyLoadingState extends AppState {}
+
+class CreateReplySuccessState extends AppState {}
+
+class CreateReplyErrorState extends AppState {
+  final String error;
+  CreateReplyErrorState(this.error);
+}
+
+class GetRepliesLoadingState extends AppState {}
+
+class GetRepliesSuccessState extends AppState {}
+
+class GetRepliesErrorState extends AppState {
+  final String error;
+  GetRepliesErrorState(this.error);
+}
+
+class ChangeReplyToState extends AppState {}
+
 // Chat States
 class SendMessageLoadingState extends AppState {}
 
@@ -89,6 +109,23 @@ class GetMessagesSuccessState extends AppState {}
 class GetMessagesErrorState extends AppState {
   final String error;
   GetMessagesErrorState(this.error);
+}
+
+class GetLastMessagesSuccessState extends AppState {}
+
+class StartRecordingState extends AppState {}
+
+class StopRecordingState extends AppState {}
+
+class RecordingTimerUpdateState extends AppState {}
+
+class UploadVoiceMessageLoadingState extends AppState {}
+
+class UploadVoiceMessageSuccessState extends AppState {}
+
+class UploadVoiceMessageErrorState extends AppState {
+  final String error;
+  UploadVoiceMessageErrorState(this.error);
 }
 
 class ShareChangeState extends AppState {}
@@ -208,3 +245,5 @@ class UploadToSupabaseErrorState extends AppState {
 }
 
 class UploadToSupabaseSuccessState extends AppState {}
+
+class SearchState extends AppState {}

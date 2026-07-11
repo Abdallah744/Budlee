@@ -3,12 +3,14 @@ class MassageModel {
   String? massageSenderId;
   String? massageReceiverId;
   String? massageDate;
+  String? voiceMassage;
 
   MassageModel({
     this.massageText,
     this.massageSenderId,
     this.massageReceiverId,
     this.massageDate,
+    this.voiceMassage,
   });
 
   MassageModel.fromJson(Map<String, dynamic> json) {
@@ -16,6 +18,7 @@ class MassageModel {
     massageSenderId = json['massageSender'];
     massageReceiverId = json['massageReceiver'];
     massageDate = json['massageDate'];
+    voiceMassage = json['voiceMassage'];
   }
 
   Map<String, dynamic> toMap() {
@@ -24,6 +27,7 @@ class MassageModel {
       'massageSender': massageSenderId,
       'massageReceiver': massageReceiverId,
       'massageDate': massageDate,
+      'voiceMassage': voiceMassage,
     };
   }
 }
