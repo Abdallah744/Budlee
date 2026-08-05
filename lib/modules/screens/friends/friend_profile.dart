@@ -48,6 +48,7 @@ class FriendProfile extends StatelessWidget {
                                   friendModel.coverImage,
                                 ),
                                 fit: BoxFit.cover,
+                                onError: (exception, stackTrace) {},
                               ),
                             ),
                           ),
@@ -62,6 +63,8 @@ class FriendProfile extends StatelessWidget {
                             backgroundImage: customImageProvider(
                               friendModel.image,
                             ),
+                            onBackgroundImageError: (exception, stackTrace) {},
+                            backgroundColor: Colors.grey[200],
                           ),
                         ),
                       ],

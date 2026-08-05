@@ -81,7 +81,8 @@ class SettingsScreen extends StatelessWidget {
                               topRight: Radius.circular(6),
                             ),
                             image: DecorationImage(
-                              image: (model.coverImageFile != null &&
+                              image:
+                                  (model.coverImageFile != null &&
                                       model.coverImageFile!.existsSync())
                                   ? FileImage(model.coverImageFile!)
                                   : customImageProvider(model.coverImage),
@@ -92,11 +93,13 @@ class SettingsScreen extends StatelessWidget {
                       ),
                       CircleAvatar(
                         radius: 60,
-                        backgroundColor:
-                            Theme.of(context).scaffoldBackgroundColor,
+                        backgroundColor: Theme.of(
+                          context,
+                        ).scaffoldBackgroundColor,
                         child: CircleAvatar(
                           radius: 58,
-                          backgroundImage: (model.profileImageFile != null &&
+                          backgroundImage:
+                              (model.profileImageFile != null &&
                                   model.profileImageFile!.existsSync())
                               ? FileImage(model.profileImageFile!)
                               : customImageProvider(model.image),
@@ -223,6 +226,35 @@ class SettingsScreen extends StatelessWidget {
                       ),
                     ),
                   ],
+                ),
+                const SizedBox(height: 15),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(10),
+                    color: Colors.grey[200],
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.notifications_active, color: Colors.blue),
+                      const SizedBox(width: 15),
+                      const Text(
+                        'Notifications',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const Spacer(),
+                      Switch(
+                        value: cubit.isNotificationEnabled,
+                        onChanged: (value) {
+                          cubit.toggleNotification(value);
+                        },
+                        activeColor: Colors.blue,
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 15),
                 Row(

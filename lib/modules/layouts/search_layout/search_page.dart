@@ -99,6 +99,12 @@ class _SearchPageState extends State<SearchPage> {
                                     backgroundImage: customImageProvider(
                                       option.image,
                                     ),
+                                    onBackgroundImageError:
+                                        customImageProvider(option.image) !=
+                                            null
+                                        ? (exception, stackTrace) {}
+                                        : null,
+                                    backgroundColor: Colors.grey[200],
                                   ),
                                   title: Text(option.name!),
                                 ),
@@ -142,6 +148,10 @@ class _SearchPageState extends State<SearchPage> {
           CircleAvatar(
             radius: 30,
             backgroundImage: customImageProvider(model.image),
+            onBackgroundImageError: customImageProvider(model.image) != null
+                ? (exception, stackTrace) {}
+                : null,
+            backgroundColor: Colors.grey[200],
           ),
           SizedBox(width: 20),
           Text(

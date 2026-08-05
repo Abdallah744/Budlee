@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
@@ -84,13 +82,16 @@ class EditProfileScreen extends StatelessWidget {
                                 topRight: Radius.circular(6),
                               ),
                               image: DecorationImage(
-                                image: (cubit.model!.coverImageFile != null &&
+                                image:
+                                    (cubit.model!.coverImageFile != null &&
                                         cubit.model!.coverImageFile!
                                             .existsSync())
                                     ? FileImage(cubit.model!.coverImageFile!)
                                     : customImageProvider(
-                                        cubit.model!.coverImage),
+                                        cubit.model!.coverImage,
+                                      ),
                                 fit: BoxFit.cover,
+                                onError: (exception, stackTrace) {},
                               ),
                             ),
                           ),
@@ -98,19 +99,23 @@ class EditProfileScreen extends StatelessWidget {
                       ),
                       CircleAvatar(
                         radius: 60,
-                        backgroundColor:
-                            Theme.of(context).scaffoldBackgroundColor,
+                        backgroundColor: Theme.of(
+                          context,
+                        ).scaffoldBackgroundColor,
                         child: Stack(
                           alignment: AlignmentDirectional.bottomEnd,
                           children: [
                             CircleAvatar(
                               radius: 58,
-                              backgroundImage: (cubit.model!.profileImageFile !=
-                                          null &&
+                              backgroundImage:
+                                  (cubit.model!.profileImageFile != null &&
                                       cubit.model!.profileImageFile!
                                           .existsSync())
                                   ? FileImage(cubit.model!.profileImageFile!)
                                   : customImageProvider(cubit.model!.image),
+                              onBackgroundImageError:
+                                  (exception, stackTrace) {},
+                              backgroundColor: Colors.grey[200],
                             ),
                             IconButton(
                               onPressed: () {

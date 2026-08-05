@@ -43,13 +43,13 @@ class Feeds extends StatelessWidget {
                     children: [
                       CircleAvatar(
                         radius: 21,
-                        backgroundImage:
-                            backgroundImage, // Use the determined background image
+                        backgroundImage: backgroundImage,
+                        onBackgroundImageError: backgroundImage != null
+                            ? (exception, stackTrace) {}
+                            : null,
+                        backgroundColor: Colors.grey[200],
                         child: backgroundImage == null
-                            ? Icon(
-                                Icons.account_circle,
-                                size: 42,
-                              ) // Fallback icon
+                            ? Icon(Icons.account_circle, size: 42)
                             : null,
                       ),
                       SizedBox(width: 15),
@@ -172,6 +172,11 @@ class Feeds extends StatelessWidget {
                 CircleAvatar(
                   radius: 21,
                   backgroundImage: customImageProvider(profileImageUrl),
+                  onBackgroundImageError:
+                      customImageProvider(profileImageUrl) != null
+                          ? (exception, stackTrace) {}
+                          : null,
+                  backgroundColor: Colors.grey[200],
                 ),
                 SizedBox(width: 15),
                 Expanded(
@@ -278,6 +283,13 @@ class Feeds extends StatelessWidget {
                   fit: BoxFit.fitWidth,
                   height: 200,
                   width: double.infinity,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      height: 200,
+                      color: Colors.grey[200],
+                      child: Icon(Icons.broken_image, color: Colors.grey),
+                    );
+                  },
                 ),
               ),
             SizedBox(height: 10),
@@ -334,11 +346,13 @@ class Feeds extends StatelessWidget {
                         CircleAvatar(
                           radius: 21,
                           backgroundImage: commentUserImageProvider,
+                          onBackgroundImageError:
+                              commentUserImageProvider != null
+                                  ? (exception, stackTrace) {}
+                                  : null,
+                          backgroundColor: Colors.grey[200],
                           child: commentUserImageProvider == null
-                              ? Icon(
-                                  Icons.account_circle,
-                                  size: 42,
-                                ) // Fallback icon
+                              ? Icon(Icons.account_circle, size: 42)
                               : null,
                         ),
                         SizedBox(width: 15),

@@ -56,7 +56,8 @@ class Friends extends StatelessWidget {
           children: [
             CircleAvatar(
               radius: 31,
-              backgroundImage: (cubit.myFriends[index].profileImageFile != null &&
+              backgroundImage:
+                  (cubit.myFriends[index].profileImageFile != null &&
                       cubit.myFriends[index].profileImageFile!.existsSync())
                   ? FileImage(cubit.myFriends[index].profileImageFile!)
                   : customImageProvider(cubit.myFriends[index].image),

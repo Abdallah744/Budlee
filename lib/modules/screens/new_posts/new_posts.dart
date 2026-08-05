@@ -202,6 +202,7 @@ class NewPosts extends StatelessWidget {
                                             cubit.postImageFile!,
                                           ),
                                           fit: BoxFit.cover,
+                                          onError: (exception, stackTrace) {},
                                         ),
                                       ),
                                     );

@@ -11,6 +11,7 @@ import 'package:budlee_app/modules/screens/friends/friends.dart';
 import 'package:budlee_app/utils/shared/network/local/cash_helper.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_storage/firebase_storage.dart' as firebase_storage;
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/cupertino.dart';
@@ -27,6 +28,7 @@ import '../../../core/components/components.dart';
 import '../../../core/constants/constants.dart';
 import '../../../models/comments/comments_model.dart';
 import '../../../models/massages/massage_model.dart';
+import '../../../models/notifications/notification_model.dart';
 import '../../../models/posts/posts_model.dart';
 import '../../../modules/screens/feeds/comments_screen.dart';
 import '../../../modules/screens/new_posts/new_posts.dart';
@@ -34,7 +36,10 @@ import '../../../modules/screens/settings/settings.dart';
 import 'app_states.dart';
 
 class AppCubit extends Cubit<AppState> {
-  AppCubit() : super(AppInitialStat());
+  AppCubit() : super(AppInitialStat()) {
+    isNotificationEnabled =
+        CashHelper.get(key: 'isNotificationEnabled') ?? true;
+  }
   static AppCubit get(context) => BlocProvider.of(context);
 
   int index = 0;
@@ -87,6 +92,7 @@ class AppCubit extends Cubit<AppState> {
   var phoneController = TextEditingController();
   final AudioRecorder audioRecorder = AudioRecorder();
   bool isRecording = false;
+  bool isNotificationEnabled = true;
   String? audioPath;
   int recordingDuration = 0;
   Timer? recordingTimer;
@@ -107,13 +113,26 @@ class AppCubit extends Cubit<AppState> {
   List<String> titles = ['News Feed', 'Friends', 'Messages', 'Settings'];
   List<PostsModel> posts = [];
 
+  List<NotificationModel> notifications = [];
   List<userModel> searchResult = [];
+
+  int get unreadNotificationsCount =>
+      notifications.where((element) => element.isRead == false).length;
 
   void search(String text) {
     searchResult = users.where((element) {
       return element.name!.toLowerCase().contains(text.toLowerCase());
     }).toList();
     emit(SearchState());
+  }
+
+  void toggleNotification(bool value) {
+    isNotificationEnabled = value;
+    CashHelper.putBoolean(key: 'isNotificationEnabled', value: value).then((
+      value,
+    ) {
+      emit(ChangeNotificationState());
+    });
   }
 
   void changeBottomNavBar(int index) {
@@ -360,6 +379,13 @@ class AppCubit extends Cubit<AppState> {
           getPosts();
           postImageFile = null;
           postImageUrl = null;
+          myFriends.forEach((friend) {
+            sendNotification(
+              receiverId: friend.uId!,
+              type: 'post',
+              postId: newPostRef.id,
+            );
+          });
           emit(CreatePostSuccessState());
         })
         .catchError((error) {
@@ -608,6 +634,11 @@ class AppCubit extends Cubit<AppState> {
           .doc(userId)
           .set({'like': true})
           .then((value) {
+            sendNotification(
+              receiverId: post.uId!,
+              type: 'like',
+              postId: postId,
+            );
             emit(LikeChangeState());
           })
           .catchError((error) {
@@ -680,6 +711,13 @@ class AppCubit extends Cubit<AppState> {
         .then((value) {
           postComments.add(newComment);
           changeCommentState(postId: postId);
+          sendNotification(
+            receiverId: posts
+                .firstWhere((element) => element.postId == postId)
+                .uId!,
+            type: 'comment',
+            postId: postId,
+          );
           emit(CreateCommentSuccessState());
         })
         .catchError((error) {
@@ -735,6 +773,14 @@ class AppCubit extends Cubit<AppState> {
           }
           commentReplies[commentId]!.add(newReply);
 
+          sendNotification(
+            receiverId: postComments
+                .firstWhere((element) => element.commentId == commentId)
+                .userId!,
+            type: 'reply',
+            postId: postId,
+          );
+
           emit(CreateReplySuccessState());
         })
         .catchError((error) {
@@ -781,6 +827,8 @@ class AppCubit extends Cubit<AppState> {
             model = userModel.fromJson(value.data()!);
             print(value.data()!);
             print(model);
+            updateToken(uId);
+            getNotifications();
             emit(GetUserDataSuccessState());
           } else {
             emit(GetUserDataErrorState("User data not found for ID: $uId"));
@@ -789,6 +837,16 @@ class AppCubit extends Cubit<AppState> {
         .catchError((error) {
           emit(GetUserDataErrorState(error.toString()));
         });
+  }
+
+  void updateToken(String uId) {
+    FirebaseMessaging.instance.getToken().then((token) {
+      if (token != null) {
+        FirebaseFirestore.instance.collection('users').doc(uId).update({
+          'token': token,
+        });
+      }
+    });
   }
 
   void getFriends() {
@@ -912,6 +970,8 @@ class AppCubit extends Cubit<AppState> {
     navigateTo(context, CommentsScreen());
   }
 
+  StreamSubscription? messagesSubscription;
+
   void sendMassage({
     String? massageReceiverId,
     String? massageText,
@@ -924,7 +984,7 @@ class AppCubit extends Cubit<AppState> {
       print('Attempted to send empty message - returning');
       return;
     }
-    emit(SendMessageLoadingState());
+
     MassageModel massageModel = MassageModel(
       massageText: massageText,
       massageSenderId: model!.uId,
@@ -932,6 +992,11 @@ class AppCubit extends Cubit<AppState> {
       massageDate: DateTime.now().toString(),
       voiceMassage: voiceMassage,
     );
+
+    // Optimistic Update
+    massages.add(massageModel);
+    emit(SendMessageSuccessState());
+
     FirebaseFirestore.instance
         .collection('users')
         .doc(model!.uId)
@@ -940,11 +1005,12 @@ class AppCubit extends Cubit<AppState> {
         .collection('messages')
         .add(massageModel.toMap())
         .then((value) {
-          emit(SendMessageSuccessState());
+          // Message successfully sent to sender's collection
         })
         .catchError((error) {
           emit(SendMessageErrorState(error.toString()));
         });
+
     FirebaseFirestore.instance
         .collection('users')
         .doc(massageReceiverId)
@@ -953,7 +1019,12 @@ class AppCubit extends Cubit<AppState> {
         .collection('messages')
         .add(massageModel.toMap())
         .then((value) {
-          emit(SendMessageSuccessState());
+          // Message successfully sent to receiver's collection
+          sendNotification(
+            receiverId: massageReceiverId!,
+            type: 'message',
+            messageId: value.id,
+          );
         })
         .catchError((error) {
           emit(SendMessageErrorState(error.toString()));
@@ -967,7 +1038,10 @@ class AppCubit extends Cubit<AppState> {
       return;
     }
     emit(GetMessagesLoadingState());
-    FirebaseFirestore.instance
+
+    messagesSubscription?.cancel();
+
+    messagesSubscription = FirebaseFirestore.instance
         .collection('users')
         .doc(currentUid)
         .collection('chats')
@@ -976,10 +1050,9 @@ class AppCubit extends Cubit<AppState> {
         .orderBy('massageDate')
         .snapshots()
         .listen((event) {
-          massages.clear();
+          massages = [];
           event.docs.forEach((element) {
-            massageModel = MassageModel.fromJson(element.data());
-            massages.add(massageModel!);
+            massages.add(MassageModel.fromJson(element.data()));
           });
           if (massages.isNotEmpty && massageReceiverId != null) {
             lastMessagesMap[massageReceiverId] = massages.last;
@@ -1127,5 +1200,68 @@ class AppCubit extends Cubit<AppState> {
       print('Voice upload error details: $error');
       emit(UploadVoiceMessageErrorState('Upload failed: ${error.toString()}'));
     }
+  }
+
+  void sendNotification({
+    required String receiverId,
+    required String type,
+    String? postId,
+    String? messageId,
+  }) {
+    if (receiverId == model!.uId) return;
+
+    NotificationModel notification = NotificationModel(
+      senderId: model!.uId,
+      receiverId: receiverId,
+      senderName: model!.name,
+      senderImage: model!.image,
+      type: type,
+      postId: postId,
+      messageId: messageId,
+      dateTime: DateTime.now().toString(),
+      isRead: false,
+    );
+
+    FirebaseFirestore.instance
+        .collection('users')
+        .doc(receiverId)
+        .collection('notifications')
+        .add(notification.toMap())
+        .then((value) {
+          value.update({'notificationId': value.id});
+          emit(SendNotificationSuccessState());
+        })
+        .catchError((error) {
+          emit(SendNotificationErrorState(error.toString()));
+        });
+  }
+
+  void markNotificationAsRead(String notificationId) {
+    FirebaseFirestore.instance
+        .collection('users')
+        .doc(model!.uId)
+        .collection('notifications')
+        .doc(notificationId)
+        .update({'isRead': true})
+        .then((value) {
+          emit(GetNotificationsSuccessState());
+        });
+  }
+
+  void getNotifications() {
+    emit(GetNotificationsLoadingState());
+    FirebaseFirestore.instance
+        .collection('users')
+        .doc(model!.uId)
+        .collection('notifications')
+        .orderBy('dateTime', descending: true)
+        .snapshots()
+        .listen((event) {
+          notifications = [];
+          event.docs.forEach((element) {
+            notifications.add(NotificationModel.fromJson(element.data()));
+          });
+          emit(GetNotificationsSuccessState());
+        });
   }
 }

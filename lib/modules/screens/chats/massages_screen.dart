@@ -37,6 +37,13 @@ class MassagesScreen extends StatelessWidget {
                   backgroundImage: customImageProvider(
                     cubit.users[cubit.chatItemIndex].image,
                   ),
+                  onBackgroundImageError: customImageProvider(
+                            cubit.users[cubit.chatItemIndex].image,
+                          ) !=
+                          null
+                      ? (exception, stackTrace) {}
+                      : null,
+                  backgroundColor: Colors.grey[200],
                 ),
                 title: Text(
                   cubit.users[cubit.chatItemIndex].name.toString(),
@@ -59,93 +66,120 @@ class MassagesScreen extends StatelessWidget {
                   Expanded(
                     child: ConditionalBuilder(
                       condition: cubit.model != null,
-                      builder: (context) => Padding(
-                        padding: const EdgeInsets.all(12.0),
-                        child: cubit.massages.isEmpty
-                            ? Center(
-                                child: Text(
-                                  'Start conversation with ${cubit.users[cubit.chatItemIndex].name}',
-                                  style: TextStyle(color: Colors.grey),
-                                ),
-                              )
-                            : ListView.separated(
-                                itemBuilder: (context, index) {
-                                  var massage = cubit.massages[index];
-                                  bool showDateHeader = false;
-                                  String dateHeader = '';
+                      builder: (context) => RefreshIndicator(
+                        onRefresh: () async {
+                          cubit.getMassages(
+                            massageReceiverId:
+                                cubit.users[cubit.chatItemIndex].uId,
+                          );
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.all(12.0),
+                          child: cubit.massages.isEmpty
+                              ? ListView(
+                                  physics: AlwaysScrollableScrollPhysics(),
+                                  children: [
+                                    SizedBox(
+                                      height:
+                                          MediaQuery.of(context).size.height *
+                                          0.7,
+                                      child: Center(
+                                        child: Text(
+                                          'Start conversation with ${cubit.users[cubit.chatItemIndex].name}',
+                                          style: TextStyle(color: Colors.grey),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              : ListView.separated(
+                                  physics: AlwaysScrollableScrollPhysics(),
+                                  itemBuilder: (context, index) {
+                                    var massage = cubit.massages[index];
+                                    bool showDateHeader = false;
+                                    String dateHeader = '';
 
-                                  if (massage.massageDate != null) {
-                                    DateTime messageDate = DateTime.parse(
-                                      massage.massageDate!,
-                                    );
-                                    if (index == 0) {
-                                      showDateHeader = true;
-                                      dateHeader = _getDateHeader(messageDate);
-                                    } else {
-                                      DateTime prevMessageDate = DateTime.parse(
-                                        cubit.massages[index - 1].massageDate!,
+                                    if (massage.massageDate != null) {
+                                      DateTime messageDate = DateTime.parse(
+                                        massage.massageDate!,
                                       );
-                                      if (messageDate.year !=
-                                              prevMessageDate.year ||
-                                          messageDate.month !=
-                                              prevMessageDate.month ||
-                                          messageDate.day !=
-                                              prevMessageDate.day) {
+                                      if (index == 0) {
                                         showDateHeader = true;
                                         dateHeader = _getDateHeader(
                                           messageDate,
                                         );
+                                      } else {
+                                        DateTime prevMessageDate =
+                                            DateTime.parse(
+                                              cubit
+                                                  .massages[index - 1]
+                                                  .massageDate!,
+                                            );
+                                        if (messageDate.year !=
+                                                prevMessageDate.year ||
+                                            messageDate.month !=
+                                                prevMessageDate.month ||
+                                            messageDate.day !=
+                                                prevMessageDate.day) {
+                                          showDateHeader = true;
+                                          dateHeader = _getDateHeader(
+                                            messageDate,
+                                          );
+                                        }
                                       }
                                     }
-                                  }
 
-                                  Widget messageWidget;
-                                  if (cubit.model!.uId ==
-                                      massage.massageSenderId) {
-                                    messageWidget = massageMyItemBuilder(
-                                      massage,
-                                    );
-                                  } else {
-                                    messageWidget = massageItemBuilder(massage);
-                                  }
+                                    Widget messageWidget;
+                                    if (cubit.model!.uId ==
+                                        massage.massageSenderId) {
+                                      messageWidget = massageMyItemBuilder(
+                                        massage,
+                                      );
+                                    } else {
+                                      messageWidget = massageItemBuilder(
+                                        massage,
+                                      );
+                                    }
 
-                                  if (showDateHeader) {
-                                    return Column(
-                                      children: [
-                                        Padding(
-                                          padding: const EdgeInsets.symmetric(
-                                            vertical: 20.0,
-                                          ),
-                                          child: Container(
+                                    if (showDateHeader) {
+                                      return Column(
+                                        children: [
+                                          Padding(
                                             padding: const EdgeInsets.symmetric(
-                                              horizontal: 12,
-                                              vertical: 4,
+                                              vertical: 20.0,
                                             ),
-                                            decoration: BoxDecoration(
-                                              color: Colors.grey[300],
-                                              borderRadius:
-                                                  BorderRadius.circular(10),
-                                            ),
-                                            child: Text(
-                                              dateHeader,
-                                              style: TextStyle(
-                                                color: Colors.black54,
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.bold,
+                                            child: Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 12,
+                                                    vertical: 4,
+                                                  ),
+                                              decoration: BoxDecoration(
+                                                color: Colors.grey[300],
+                                                borderRadius:
+                                                    BorderRadius.circular(10),
+                                              ),
+                                              child: Text(
+                                                dateHeader,
+                                                style: TextStyle(
+                                                  color: Colors.black54,
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
                                               ),
                                             ),
                                           ),
-                                        ),
-                                        messageWidget,
-                                      ],
-                                    );
-                                  }
-                                  return messageWidget;
-                                },
-                                separatorBuilder: (context, index) =>
-                                    SizedBox(height: 20),
-                                itemCount: cubit.massages.length,
-                              ),
+                                          messageWidget,
+                                        ],
+                                      );
+                                    }
+                                    return messageWidget;
+                                  },
+                                  separatorBuilder: (context, index) =>
+                                      SizedBox(height: 20),
+                                  itemCount: cubit.massages.length,
+                                ),
+                        ),
                       ),
                       fallback: (context) =>
                           Center(child: CircularProgressIndicator()),

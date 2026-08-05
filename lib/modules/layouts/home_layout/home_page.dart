@@ -46,10 +46,13 @@ class HomeScreen extends StatelessWidget {
                 ), // Added padding for better UI
                 child: CircleAvatar(
                   radius: 21,
-                  backgroundImage:
-                      backgroundImage, // Use the determined background image
+                  backgroundImage: backgroundImage,
+                  onBackgroundImageError: backgroundImage != null
+                      ? (exception, stackTrace) {}
+                      : null,
+                  backgroundColor: Colors.grey[200],
                   child: backgroundImage == null
-                      ? Icon(Icons.account_circle, size: 42) // Fallback icon
+                      ? Icon(Icons.account_circle, size: 42)
                       : null,
                 ),
               ),
@@ -62,16 +65,31 @@ class HomeScreen extends StatelessWidget {
                 },
                 icon: Icon(Icons.search, size: 30),
               ),
-              // IconButton(
-              //   onPressed: () {
-              //     navigateTo(context, NotificationsPage());
-              //   },
-              //   icon: Icon(Icons.notifications),
-              // ),
+              IconButton(
+                onPressed: () {
+                  navigateTo(context, NotificationsPage());
+                },
+                icon: Stack(
+                  alignment: AlignmentDirectional.topEnd,
+                  children: [
+                    const Icon(Icons.notifications),
+                    if (cubit.unreadNotificationsCount > 0)
+                      CircleAvatar(
+                        radius: 8,
+                        backgroundColor: Colors.red,
+                        child: Text(
+                          '${cubit.unreadNotificationsCount}',
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
             ],
           ),
-          // The body no longer needs ConditionalBuilder for the cubit.model check,
-          // as it's handled by the initial if (cubit.model == null) block.
           body: cubit.screens[cubit.currentIndex],
           bottomNavigationBar: BottomNavigationBar(
             items: cubit.bottomNavItems,

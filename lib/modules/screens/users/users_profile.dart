@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -79,25 +77,31 @@ class UserProfile extends StatelessWidget {
                               topRight: Radius.circular(6),
                             ),
                             image: DecorationImage(
-                              image: (model.coverImageFile != null &&
+                              image:
+                                  (model.coverImageFile != null &&
                                       model.coverImageFile!.existsSync())
                                   ? FileImage(model.coverImageFile!)
                                   : customImageProvider(model.coverImage),
                               fit: BoxFit.cover,
+                              onError: (exception, stackTrace) {},
                             ),
                           ),
                         ),
                       ),
                       CircleAvatar(
                         radius: 60,
-                        backgroundColor:
-                            Theme.of(context).scaffoldBackgroundColor,
+                        backgroundColor: Theme.of(
+                          context,
+                        ).scaffoldBackgroundColor,
                         child: CircleAvatar(
                           radius: 58,
-                          backgroundImage: (model.profileImageFile != null &&
+                          backgroundImage:
+                              (model.profileImageFile != null &&
                                   model.profileImageFile!.existsSync())
                               ? FileImage(model.profileImageFile!)
                               : customImageProvider(model.image),
+                          onBackgroundImageError: (exception, stackTrace) {},
+                          backgroundColor: Colors.grey[200],
                         ),
                       ),
                     ],

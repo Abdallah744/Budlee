@@ -164,6 +164,11 @@ class CommentsScreen extends StatelessWidget {
                 CircleAvatar(
                   radius: 21,
                   backgroundImage: customImageProvider(profileImageUrl),
+                  onBackgroundImageError:
+                      customImageProvider(profileImageUrl) != null
+                      ? (exception, stackTrace) {}
+                      : null,
+                  backgroundColor: Colors.grey[200],
                 ),
                 SizedBox(width: 15),
                 Expanded(
@@ -251,6 +256,13 @@ class CommentsScreen extends StatelessWidget {
                   fit: BoxFit.fitWidth,
                   height: 200,
                   width: double.infinity,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      height: 200,
+                      color: Colors.grey[200],
+                      child: Icon(Icons.broken_image, color: Colors.grey),
+                    );
+                  },
                 ),
               ),
             SizedBox(height: 10),
@@ -318,10 +330,12 @@ class CommentsScreen extends StatelessWidget {
             backgroundImage: comment.userImage != null
                 ? (comment.userImage!.startsWith('http')
                       ? NetworkImage(comment.userImage.toString())
-                      : FileImage(
-                          File(comment.userImage.toString()),
-                        ) /*as ImageProvider*/ )
+                      : FileImage(File(comment.userImage.toString())))
                 : null,
+            onBackgroundImageError: comment.userImage != null
+                ? (exception, stackTrace) {}
+                : null,
+            backgroundColor: Colors.grey[200],
           ),
           SizedBox(width: 15),
           Expanded(
@@ -408,6 +422,10 @@ class CommentsScreen extends StatelessWidget {
           CircleAvatar(
             radius: 15,
             backgroundImage: customImageProvider(reply.userImage),
+            onBackgroundImageError: customImageProvider(reply.userImage) != null
+                ? (exception, stackTrace) {}
+                : null,
+            backgroundColor: Colors.grey[200],
           ),
           SizedBox(width: 10),
           Expanded(

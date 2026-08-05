@@ -11,6 +11,7 @@ class userModel {
   String? image; // Assumed to be a URL/path string
   String? coverImage; // Assumed to be a URL/path string
   String? uId;
+  String? token;
   bool isEmailVerified = false;
   File? profileImageFile;
   File? coverImageFile;
@@ -44,6 +45,21 @@ class userModel {
       _imagesOfGallery = null;
     } else if (value is List<File>) {
       _imagesOfGallery = value;
+    } else if (value is String) {
+      // Handle stringified list or single path
+      if (value.startsWith('[') && value.endsWith(']')) {
+        String content = value.substring(1, value.length - 1);
+        if (content.isEmpty) {
+          _imagesOfGallery = [];
+        } else {
+          _imagesOfGallery =
+              content.split(',').map((e) => File(e.trim())).toList();
+        }
+      } else if (value.isNotEmpty) {
+        _imagesOfGallery = [File(value)];
+      } else {
+        _imagesOfGallery = [];
+      }
     } else if (value is List<String>) {
       _imagesOfGallery = value.map((path) => File(path)).toList();
     } else if (value is List) {
@@ -84,6 +100,7 @@ class userModel {
     bio = json['bio'];
     phone = json['phone'];
     uId = json['uId'];
+    token = json['token'];
     isEmailVerified = json['isEmailVerified'] ?? false;
 
     if (json.containsKey('gallery')) {
@@ -121,12 +138,13 @@ class userModel {
       'bio': bio,
       'avatar': image,
       // Use the getter for imagesOfGallery
-      'gallery': imagesOfGallery?.map((file) => file.path).toList().toString(),
+      'gallery': imagesOfGallery?.map((file) => file.path).toList(),
       'profileImageFile': profileImageFile?.path,
       'coverImageFile': coverImageFile?.path,
       'coverImage': coverImage,
       'phone': phone,
       'uId': uId,
+      'token': token,
     };
   }
 }

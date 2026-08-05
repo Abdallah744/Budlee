@@ -247,3 +247,24 @@ class UploadToSupabaseErrorState extends AppState {
 class UploadToSupabaseSuccessState extends AppState {}
 
 class SearchState extends AppState {}
+
+// Notification States
+class SendNotificationLoadingState extends AppState {}
+
+class SendNotificationSuccessState extends AppState {}
+
+class SendNotificationErrorState extends AppState {
+  final String error;
+  SendNotificationErrorState(this.error);
+}
+
+class GetNotificationsLoadingState extends AppState {}
+
+class GetNotificationsSuccessState extends AppState {}
+
+class GetNotificationsErrorState extends AppState {
+  final String error;
+  GetNotificationsErrorState(this.error);
+}
+
+class ChangeNotificationState extends AppState {}

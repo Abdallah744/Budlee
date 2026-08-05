@@ -51,10 +51,18 @@ class Chats extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 31,
-                  backgroundImage: (cubit.users[index].profileImageFile != null &&
+                  backgroundImage:
+                      (cubit.users[index].profileImageFile != null &&
                           cubit.users[index].profileImageFile!.existsSync())
                       ? FileImage(cubit.users[index].profileImageFile!)
                       : customImageProvider(cubit.users[index].image),
+                  onBackgroundImageError: (cubit.users[index].profileImageFile !=
+                                  null &&
+                              cubit.users[index].profileImageFile!.existsSync() ||
+                          customImageProvider(cubit.users[index].image) != null)
+                      ? (exception, stackTrace) {}
+                      : null,
+                  backgroundColor: Colors.grey[200],
                 ),
                 Padding(
                   padding: const EdgeInsetsDirectional.only(bottom: 3, end: 3),

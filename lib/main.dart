@@ -5,6 +5,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'config/cubit/app_cubit/app_cubit.dart';
@@ -13,6 +14,18 @@ import 'config/cubit/login/login_cubit.dart';
 import 'core/constants/constants.dart';
 import 'core/styles/themes.dart';
 import 'modules/splash_screen.dart';
+
+// Local Notifications Plugin
+final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+    FlutterLocalNotificationsPlugin();
+
+// Android Notification Channel
+const AndroidNotificationChannel channel = AndroidNotificationChannel(
+  'high_importance_channel', // id
+  'High Importance Notifications', // title
+  description: 'This channel is used for important notifications.',
+  importance: Importance.max,
+);
 
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
@@ -43,25 +56,80 @@ void main() async {
     publishableKey: 'sb_publishable_K6vHM1dGaos_G_W5lMkEzA_D7NGvS_4',
   );
 
-  try {
-    var token = await FirebaseMessaging.instance.getToken();
-    print("Token: $token");
-  } catch (e) {
-    print("Firebase Messaging Error: $e");
-  }
-  FirebaseMessaging.onMessage.listen((event) {
-    print(event.data.toString());
-    print('onMessage: $event');
-    showToast(
-      text: 'onMessage: ${event.data.toString()}',
-      state: ToastStates.SUCCESS,
-    );
+  // Initialize Local Notifications
+  const AndroidInitializationSettings initializationSettingsAndroid =
+      AndroidInitializationSettings('@mipmap/ic_launcher');
+  const DarwinInitializationSettings initializationSettingsIOS =
+      DarwinInitializationSettings();
+  const InitializationSettings initializationSettings = InitializationSettings(
+    android: initializationSettingsAndroid,
+    iOS: initializationSettingsIOS,
+  );
+
+  await flutterLocalNotificationsPlugin.initialize(
+    initializationSettings,
+    onDidReceiveNotificationResponse: (NotificationResponse response) {
+      // Handle notification tap here if needed
+      print('Notification tapped: ${response.payload}');
+    },
+  );
+
+  // Create Android Notification Channel
+  await flutterLocalNotificationsPlugin
+      .resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin
+      >()
+      ?.createNotificationChannel(channel);
+
+  // Request Notification Permissions
+  FirebaseMessaging messaging = FirebaseMessaging.instance;
+  await messaging.requestPermission(
+    alert: true,
+    announcement: false,
+    badge: true,
+    carPlay: false,
+    criticalAlert: false,
+    provisional: false,
+    sound: true,
+  );
+
+  // Handle Foreground Messages
+  FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+    bool isEnabled = CashHelper.get(key: 'isNotificationEnabled') ?? true;
+    if (isEnabled) {
+      RemoteNotification? notification = message.notification;
+      AndroidNotification? android = message.notification?.android;
+
+      if (notification != null && android != null && !kIsWeb) {
+        flutterLocalNotificationsPlugin.show(
+          notification.hashCode,
+          notification.title,
+          notification.body,
+          NotificationDetails(
+            android: AndroidNotificationDetails(
+              channel.id,
+              channel.name,
+              channelDescription: channel.description,
+              icon: android.smallIcon,
+            ),
+          ),
+          payload: message.data.toString(),
+        );
+      }
+    }
   });
 
-  FirebaseMessaging.onMessageOpenedApp.listen((event) {
-    print(event.data.toString());
-    print('onMessageOpenedApp: $event');
+  // Handle opening from Terminated/Background state
+  FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+    print('Message opened app: ${message.data}');
+    // You can navigate here based on message.data
   });
+
+  RemoteMessage? initialMessage = await FirebaseMessaging.instance
+      .getInitialMessage();
+  if (initialMessage != null) {
+    print('Initial message: ${initialMessage.data}');
+  }
 
   FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
