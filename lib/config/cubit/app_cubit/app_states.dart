@@ -92,7 +92,6 @@ class GetRepliesErrorState extends AppState {
 
 class ChangeReplyToState extends AppState {}
 
-// Chat States
 class SendMessageLoadingState extends AppState {}
 
 class SendMessageSuccessState extends AppState {}
@@ -139,7 +138,6 @@ class UploadToGalleryErrorState extends AppState {
   UploadToGalleryErrorState(this.error);
 }
 
-//Create Posts States
 class CreatePostLoadingState extends AppState {}
 
 class CreatePostSuccessState extends AppState {}
@@ -149,7 +147,6 @@ class CreatePostErrorState extends AppState {
   CreatePostErrorState(this.error);
 }
 
-// Upload Posts Image States
 class UploadPostsImageLoadingState extends AppState {}
 
 class UploadPostsImageSuccessState extends AppState {}
@@ -159,10 +156,8 @@ class UploadPostsImageErrorState extends AppState {
   UploadPostsImageErrorState(this.error);
 }
 
-// Remove Post Image States
 class RemovePostImageState extends AppState {}
 
-// Get Posts States
 class GetPostsLoadingState extends AppState {}
 
 class GetPostsSuccessState extends AppState {}
@@ -185,12 +180,10 @@ class GetAllUsersErrorState extends AppState {
   GetAllUsersErrorState(this.error);
 }
 
-// log out States
 class LogOutLoadingState extends AppState {}
 
 class LogOutSuccessState extends AppState {}
 
-// Add Friend
 class AddFriendLoadingState extends AppState {}
 
 class AddFriendSuccessState extends AppState {}
@@ -200,7 +193,6 @@ class AddFriendErrorState extends AppState {
   AddFriendErrorState(this.error);
 }
 
-// remove Friend
 class RemoveFriendLoadingState extends AppState {}
 
 class RemoveFriendSuccessState extends AppState {}
@@ -210,7 +202,6 @@ class RemoveFriendErrorState extends AppState {
   RemoveFriendErrorState(this.error);
 }
 
-// Get Friends
 class GetFriendsLoadingState extends AppState {}
 
 class GetFriendsSuccessState extends AppState {}
@@ -219,8 +210,6 @@ class GetFriendsErrorState extends AppState {
   final String error;
   GetFriendsErrorState(this.error);
 }
-
-// profile
 
 class ProfileLoading extends AppState {}
 
@@ -234,8 +223,6 @@ class ProfileSuccess extends AppState {
   ProfileSuccess(this.imageFile);
 }
 
-// upload to supabase
-
 class UploadToSupabaseLoadingState extends AppState {}
 
 class UploadToSupabaseErrorState extends AppState {
@@ -247,24 +234,3 @@ class UploadToSupabaseErrorState extends AppState {
 class UploadToSupabaseSuccessState extends AppState {}
 
 class SearchState extends AppState {}
-
-// Notification States
-class SendNotificationLoadingState extends AppState {}
-
-class SendNotificationSuccessState extends AppState {}
-
-class SendNotificationErrorState extends AppState {
-  final String error;
-  SendNotificationErrorState(this.error);
-}
-
-class GetNotificationsLoadingState extends AppState {}
-
-class GetNotificationsSuccessState extends AppState {}
-
-class GetNotificationsErrorState extends AppState {
-  final String error;
-  GetNotificationsErrorState(this.error);
-}
-
-class ChangeNotificationState extends AppState {}

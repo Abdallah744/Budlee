@@ -3,14 +3,15 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../config/cubit/app_cubit/app_cubit.dart';
+import '../../../config/cubit/app_cubit/app_bloc.dart';
+import '../../../config/cubit/app_cubit/app_event.dart';
 import '../../../config/cubit/app_cubit/app_states.dart';
 import '../../../core/components/components.dart';
 
 class NewPosts extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return BlocConsumer<AppCubit, AppState>(
+    return BlocConsumer<AppBloc, AppState>(
       listener: (context, state) {
         if (state is CreatePostSuccessState) {
           showToast(
@@ -21,7 +22,7 @@ class NewPosts extends StatelessWidget {
         }
       },
       builder: (context, state) {
-        var cubit = AppCubit.get(context);
+        var bloc = AppBloc.get(context);
 
         const double avatarDiameter = 42.0;
         const Icon fallbackIcon = Icon(
@@ -30,25 +31,21 @@ class NewPosts extends StatelessWidget {
         );
         Widget avatarContentWidget;
 
-        if (cubit.model != null) {
-          // Case 1: cubit.model.profileImageFile (File object)
-          if (cubit.model!.profileImageFile != null) {
-            final imageFile = cubit.model!.profileImageFile!;
+        if (bloc.model != null) {
+          if (bloc.model!.profileImageFile != null) {
+            final imageFile = bloc.model!.profileImageFile!;
             avatarContentWidget = Image.file(
               imageFile,
               width: avatarDiameter,
               height: avatarDiameter,
               fit: BoxFit.cover,
               errorBuilder: (context, error, stackTrace) {
-                // Optionally log error: print('Error loading profileImageFile ${imageFile.path}: $error');
                 return fallbackIcon;
               },
             );
-          }
-          // Case 2: cubit.model.image (String: URL or local path)
-          else if (cubit.model!.image != null &&
-              cubit.model!.image!.toString().isNotEmpty) {
-            final imagePathOrUrl = cubit.model!.image!.toString();
+          } else if (bloc.model!.image != null &&
+              bloc.model!.image!.toString().isNotEmpty) {
+            final imagePathOrUrl = bloc.model!.image!.toString();
             if (imagePathOrUrl.startsWith('http')) {
               avatarContentWidget = Image.network(
                 imagePathOrUrl,
@@ -56,12 +53,10 @@ class NewPosts extends StatelessWidget {
                 height: avatarDiameter,
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stackTrace) {
-                  // Optionally log error: print('Error loading network image $imagePathOrUrl: $error');
                   return fallbackIcon;
                 },
               );
             } else {
-              // Local file path as a String
               final localImageFile = File(imagePathOrUrl);
               avatarContentWidget = Image.file(
                 localImageFile,
@@ -69,7 +64,6 @@ class NewPosts extends StatelessWidget {
                 height: avatarDiameter,
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stackTrace) {
-                  // Optionally log error: print('Error loading local image file $localImageFile: $error');
                   return fallbackIcon;
                 },
               );
@@ -88,15 +82,17 @@ class NewPosts extends StatelessWidget {
             actions: [
               TextButton(
                 onPressed: () {
-                  cubit.createPost(
-                    postImage: cubit.postImageUrl ?? '',
-                    profileImage: cubit.model?.image ?? '',
-                    dateTime: DateTime.now().toString(),
-                    text: cubit.postTextController.text,
+                  bloc.add(
+                    AppCreatePostEvent(
+                      postImage: bloc.postImageUrl ?? '',
+                      profileImage: bloc.model?.image ?? '',
+                      dateTime: DateTime.now().toString(),
+                      text: bloc.postTextController.text,
+                    ),
                   );
-                  cubit.postTextController.clear();
+                  bloc.postTextController.clear();
                 },
-                child: Text(
+                child: const Text(
                   'Post',
                   style: TextStyle(color: Colors.blue, fontSize: 18),
                 ),
@@ -107,13 +103,13 @@ class NewPosts extends StatelessWidget {
             padding: const EdgeInsets.all(15.0),
             child: Column(
               children: [
-                if (state is CreatePostLoadingState) LinearProgressIndicator(),
+                if (state is CreatePostLoadingState)
+                  const LinearProgressIndicator(),
                 Row(
                   children: [
                     CircleAvatar(
-                      radius: 21, // This means diameter is 42
-                      backgroundColor:
-                          Colors.grey[200], // Placeholder background
+                      radius: 21,
+                      backgroundColor: Colors.grey[200],
                       child: ClipOval(
                         child: SizedBox(
                           width: avatarDiameter,
@@ -122,30 +118,30 @@ class NewPosts extends StatelessWidget {
                         ),
                       ),
                     ),
-                    SizedBox(width: 10),
+                    const SizedBox(width: 10),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
                           children: [
                             Text(
-                              '${cubit.model?.name ?? "User Name"}',
-                              style: TextStyle(
+                              bloc.model?.name ?? "User Name",
+                              style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.black,
                                 height: 1.4,
                               ),
                             ),
-                            Icon(
+                            const Icon(
                               Icons.check_circle_sharp,
                               color: Colors.blue,
                               size: 18,
                             ),
                           ],
                         ),
-                        Text(
-                          'Public', // Placeholder
+                        const Text(
+                          'Public',
                           style: TextStyle(
                             fontSize: 14,
                             color: Colors.grey,
@@ -156,100 +152,84 @@ class NewPosts extends StatelessWidget {
                     ),
                   ],
                 ),
-                SizedBox(height: 20),
+                const SizedBox(height: 20),
                 Expanded(
                   child: TextFormField(
-                    controller: cubit.postTextController,
-                    decoration: InputDecoration(
+                    controller: bloc.postTextController,
+                    decoration: const InputDecoration(
                       hintText: 'What\'s on your mind?',
                       border: InputBorder.none,
                     ),
-                    validator: (value) {
-                      return null;
-                    },
                   ),
                 ),
-                if (cubit.postImageFile != null)
-                  Container(
+                if (bloc.postImageFile != null)
+                  SizedBox(
                     height: 250,
                     width: double.infinity,
                     child: Stack(
                       alignment: AlignmentDirectional.topEnd,
                       children: [
                         FutureBuilder<bool>(
-                          future: cubit.postImageFile!
-                              .exists(), // Asynchronously check if file exists
-                          builder:
-                              (
-                                BuildContext context,
-                                AsyncSnapshot<bool> snapshot,
-                              ) {
-                                if (snapshot.connectionState ==
-                                    ConnectionState.done) {
-                                  if (snapshot.hasData &&
-                                      snapshot.data == true) {
-                                    // File exists, display it
-                                    return Container(
-                                      height: 250,
-                                      width: double.infinity,
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.only(
-                                          topLeft: Radius.circular(6),
-                                          topRight: Radius.circular(6),
-                                        ),
-                                        image: DecorationImage(
-                                          image: FileImage(
-                                            cubit.postImageFile!,
-                                          ),
-                                          fit: BoxFit.cover,
-                                          onError: (exception, stackTrace) {},
-                                        ),
-                                      ),
-                                    );
-                                  } else {
-                                    // File does not exist or error in checking
-                                    return Container(
-                                      height: 250,
-                                      width: double.infinity,
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.only(
-                                          topLeft: Radius.circular(6),
-                                          topRight: Radius.circular(6),
-                                        ),
-                                        color: Colors
-                                            .grey[200], // Placeholder color
-                                      ),
-                                      child: Center(
-                                        child: Icon(
-                                          Icons.broken_image,
-                                          size: 50,
-                                          color: Colors.grey[400],
-                                        ),
-                                      ),
-                                    );
-                                  }
-                                } else {
-                                  // Still checking, show a loader
-                                  return Container(
-                                    height: 250,
-                                    width: double.infinity,
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.only(
-                                        topLeft: Radius.circular(6),
-                                        topRight: Radius.circular(6),
-                                      ),
-                                      color: Colors.grey[200],
+                          future: bloc.postImageFile!.exists(),
+                          builder: (context, snapshot) {
+                            if (snapshot.connectionState ==
+                                ConnectionState.done) {
+                              if (snapshot.hasData && snapshot.data == true) {
+                                return Container(
+                                  height: 250,
+                                  width: double.infinity,
+                                  decoration: BoxDecoration(
+                                    borderRadius: const BorderRadius.only(
+                                      topLeft: Radius.circular(6),
+                                      topRight: Radius.circular(6),
                                     ),
-                                    child: Center(
-                                      child: CircularProgressIndicator(),
+                                    image: DecorationImage(
+                                      image: FileImage(bloc.postImageFile!),
+                                      fit: BoxFit.cover,
                                     ),
-                                  );
-                                }
-                              },
+                                  ),
+                                );
+                              } else {
+                                return Container(
+                                  height: 250,
+                                  width: double.infinity,
+                                  decoration: BoxDecoration(
+                                    borderRadius: const BorderRadius.only(
+                                      topLeft: Radius.circular(6),
+                                      topRight: Radius.circular(6),
+                                    ),
+                                    color: Colors.grey[200],
+                                  ),
+                                  child: Center(
+                                    child: Icon(
+                                      Icons.broken_image,
+                                      size: 50,
+                                      color: Colors.grey[400],
+                                    ),
+                                  ),
+                                );
+                              }
+                            } else {
+                              return Container(
+                                height: 250,
+                                width: double.infinity,
+                                decoration: BoxDecoration(
+                                  borderRadius: const BorderRadius.only(
+                                    topLeft: Radius.circular(6),
+                                    topRight: Radius.circular(6),
+                                  ),
+                                  color: Colors.grey[200],
+                                ),
+                                child: const Center(
+                                  child: CircularProgressIndicator(),
+                                ),
+                              );
+                            }
+                          },
                         ),
                         IconButton(
                           onPressed: () {
-                            cubit.removePostImage();
+                            bloc.add(AppRemovePostImageEvent());
                           },
                           icon: Icon(
                             Icons.close_outlined,
@@ -260,16 +240,16 @@ class NewPosts extends StatelessWidget {
                     ),
                   ),
                 if (state is UploadPostsImageLoadingState)
-                  LinearProgressIndicator(),
+                  const LinearProgressIndicator(),
                 Row(
                   children: [
-                    SizedBox(width: 35),
+                    const SizedBox(width: 35),
                     Expanded(
                       child: TextButton(
                         onPressed: () {
-                          cubit.getPostsImage();
+                          bloc.add(AppGetPostsImageEvent());
                         },
-                        child: Row(
+                        child: const Row(
                           children: [
                             Icon(Icons.image, color: Colors.blue, size: 18),
                             SizedBox(width: 5),
@@ -287,9 +267,9 @@ class NewPosts extends StatelessWidget {
                     Expanded(
                       child: TextButton(
                         onPressed: () {
-                          cubit.getPostsImage();
+                          bloc.add(AppGetPostsImageEvent());
                         },
-                        child: Row(
+                        child: const Row(
                           children: [
                             Icon(
                               Icons.video_collection_outlined,

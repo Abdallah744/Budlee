@@ -7,38 +7,39 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 
-import '../../../config/cubit/app_cubit/app_cubit.dart';
+import '../../../config/cubit/app_cubit/app_bloc.dart';
 import '../../../config/cubit/app_cubit/app_states.dart';
 import 'massages_screen.dart';
 
 class Chats extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return BlocConsumer<AppCubit, AppState>(
+    return BlocConsumer<AppBloc, AppState>(
       listener: (context, state) {},
       builder: (context, state) {
-        var cubit = AppCubit.get(context);
+        var bloc = AppBloc.get(context);
         return Scaffold(
           body: ConditionalBuilder(
-            condition: cubit.users.isNotEmpty,
+            condition: bloc.users.isNotEmpty,
             builder: (context) => ListView.separated(
-              physics: BouncingScrollPhysics(),
-              itemBuilder: chatsItemBuilder,
+              physics: const BouncingScrollPhysics(),
+              itemBuilder: (context, index) =>
+                  chatsItemBuilder(context, index, bloc),
               separatorBuilder: (context, index) => myDivider2(),
-              itemCount: cubit.users.length,
+              itemCount: bloc.users.length,
             ),
-            fallback: (context) => Center(child: CircularProgressIndicator()),
+            fallback: (context) =>
+                const Center(child: CircularProgressIndicator()),
           ),
         );
       },
     );
   }
 
-  Widget chatsItemBuilder(context, index) {
-    var cubit = AppCubit.get(context);
+  Widget chatsItemBuilder(context, index, AppBloc bloc) {
     return InkWell(
       onTap: () {
-        cubit.chatItemIndex = index;
+        bloc.chatItemIndex = index;
         navigateTo(context, MassagesScreen());
       },
       child: Padding(
@@ -52,20 +53,21 @@ class Chats extends StatelessWidget {
                 CircleAvatar(
                   radius: 31,
                   backgroundImage:
-                      (cubit.users[index].profileImageFile != null &&
-                          cubit.users[index].profileImageFile!.existsSync())
-                      ? FileImage(cubit.users[index].profileImageFile!)
-                      : customImageProvider(cubit.users[index].image),
-                  onBackgroundImageError: (cubit.users[index].profileImageFile !=
-                                  null &&
-                              cubit.users[index].profileImageFile!.existsSync() ||
-                          customImageProvider(cubit.users[index].image) != null)
+                      (bloc.users[index].profileImageFile != null &&
+                          bloc.users[index].profileImageFile!.existsSync())
+                      ? FileImage(bloc.users[index].profileImageFile!)
+                      : customImageProvider(bloc.users[index].image),
+                  onBackgroundImageError:
+                      (bloc.users[index].profileImageFile != null &&
+                              bloc.users[index].profileImageFile!
+                                  .existsSync() ||
+                          customImageProvider(bloc.users[index].image) != null)
                       ? (exception, stackTrace) {}
                       : null,
                   backgroundColor: Colors.grey[200],
                 ),
-                Padding(
-                  padding: const EdgeInsetsDirectional.only(bottom: 3, end: 3),
+                const Padding(
+                  padding: EdgeInsetsDirectional.only(bottom: 3, end: 3),
                   child: Icon(
                     Icons.circle_rounded,
                     color: Colors.green,
@@ -74,43 +76,52 @@ class Chats extends StatelessWidget {
                 ),
               ],
             ),
-            SizedBox(width: 10),
+            const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      Text(
-                        '${cubit.users[index].name}',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
+                      Expanded(
+                        child: Text(
+                          '${bloc.users[index].name}',
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      Spacer(),
-                      if (cubit.lastMessagesMap.containsKey(
-                            cubit.users[index].uId,
+                      if (bloc.lastMessagesMap.containsKey(
+                            bloc.users[index].uId,
                           ) &&
-                          cubit
-                                  .lastMessagesMap[cubit.users[index].uId]!
+                          bloc
+                                  .lastMessagesMap[bloc.users[index].uId]!
                                   .massageDate !=
                               null)
-                        Text(
-                          _getFormattedLastMessageDate(
-                            DateTime.parse(
-                              cubit
-                                  .lastMessagesMap[cubit.users[index].uId]!
-                                  .massageDate!,
+                        Padding(
+                          padding: const EdgeInsets.only(left: 10.0),
+                          child: Text(
+                            _getFormattedLastMessageDate(
+                              DateTime.parse(
+                                bloc
+                                    .lastMessagesMap[bloc.users[index].uId]!
+                                    .massageDate!,
+                              ),
+                            ),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey,
                             ),
                           ),
-                          style: TextStyle(fontSize: 12, color: Colors.grey),
                         ),
                     ],
                   ),
                   Text(
-                    _getLastMessageText(cubit, index),
-                    style: TextStyle(fontSize: 16, color: Colors.grey),
+                    _getLastMessageText(bloc, index),
+                    style: const TextStyle(fontSize: 16, color: Colors.grey),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -140,13 +151,13 @@ class Chats extends StatelessWidget {
     }
   }
 
-  String _getLastMessageText(AppCubit cubit, int index) {
-    final userId = cubit.users[index].uId;
-    if (!cubit.lastMessagesMap.containsKey(userId)) {
-      return 'Start conversation with ${cubit.users[index].name}';
+  String _getLastMessageText(AppBloc bloc, int index) {
+    final userId = bloc.users[index].uId;
+    if (!bloc.lastMessagesMap.containsKey(userId)) {
+      return 'Start conversation with ${bloc.users[index].name}';
     }
 
-    final lastMsg = cubit.lastMessagesMap[userId]!;
+    final lastMsg = bloc.lastMessagesMap[userId]!;
     if (lastMsg.voiceMassage != null) {
       return '🎤 Voice message';
     }

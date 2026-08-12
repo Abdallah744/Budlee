@@ -6,7 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 
-import '../../../config/cubit/app_cubit/app_cubit.dart';
+import '../../../config/cubit/app_cubit/app_bloc.dart';
+import '../../../config/cubit/app_cubit/app_event.dart';
 import '../../../config/cubit/app_cubit/app_states.dart';
 
 class MassagesScreen extends StatelessWidget {
@@ -14,12 +15,13 @@ class MassagesScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Builder(
       builder: (context) {
-        AppCubit.get(context).getMassages(
-          massageReceiverId: AppCubit.get(
-            context,
-          ).users[AppCubit.get(context).chatItemIndex].uId,
+        var bloc = AppBloc.get(context);
+        bloc.add(
+          AppGetMassagesEvent(
+            massageReceiverId: bloc.users[bloc.chatItemIndex].uId,
+          ),
         );
-        return BlocConsumer<AppCubit, AppState>(
+        return BlocConsumer<AppBloc, AppState>(
           listener: (context, state) {
             if (state is UploadVoiceMessageErrorState) {
               showToast(text: state.error, state: ToastStates.ERROR);
@@ -29,16 +31,17 @@ class MassagesScreen extends StatelessWidget {
             }
           },
           builder: (context, state) {
-            var cubit = AppCubit.get(context);
+            var bloc = AppBloc.get(context);
             return Scaffold(
               appBar: AppBar(
                 leading: CircleAvatar(
                   radius: 21,
                   backgroundImage: customImageProvider(
-                    cubit.users[cubit.chatItemIndex].image,
+                    bloc.users[bloc.chatItemIndex].image,
                   ),
-                  onBackgroundImageError: customImageProvider(
-                            cubit.users[cubit.chatItemIndex].image,
+                  onBackgroundImageError:
+                      customImageProvider(
+                            bloc.users[bloc.chatItemIndex].image,
                           ) !=
                           null
                       ? (exception, stackTrace) {}
@@ -46,18 +49,24 @@ class MassagesScreen extends StatelessWidget {
                   backgroundColor: Colors.grey[200],
                 ),
                 title: Text(
-                  cubit.users[cubit.chatItemIndex].name.toString(),
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  bloc.users[bloc.chatItemIndex].name.toString(),
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 actions: [
-                  IconButton(onPressed: () {}, icon: Icon(Icons.video_call)),
-                  IconButton(onPressed: () {}, icon: Icon(Icons.phone)),
+                  IconButton(
+                    onPressed: () {},
+                    icon: const Icon(Icons.video_call),
+                  ),
+                  IconButton(onPressed: () {}, icon: const Icon(Icons.phone)),
                   IconButton(
                     onPressed: () {
                       Navigator.pop(context);
-                      cubit.chatItemIndex = null;
+                      bloc.chatItemIndex = null;
                     },
-                    icon: Icon(Icons.arrow_back),
+                    icon: const Icon(Icons.arrow_back),
                   ),
                 ],
               ),
@@ -65,19 +74,22 @@ class MassagesScreen extends StatelessWidget {
                 children: [
                   Expanded(
                     child: ConditionalBuilder(
-                      condition: cubit.model != null,
+                      condition: bloc.model != null,
                       builder: (context) => RefreshIndicator(
                         onRefresh: () async {
-                          cubit.getMassages(
-                            massageReceiverId:
-                                cubit.users[cubit.chatItemIndex].uId,
+                          bloc.add(
+                            AppGetMassagesEvent(
+                              massageReceiverId:
+                                  bloc.users[bloc.chatItemIndex].uId,
+                            ),
                           );
                         },
                         child: Padding(
                           padding: const EdgeInsets.all(12.0),
-                          child: cubit.massages.isEmpty
+                          child: bloc.massages.isEmpty
                               ? ListView(
-                                  physics: AlwaysScrollableScrollPhysics(),
+                                  physics:
+                                      const AlwaysScrollableScrollPhysics(),
                                   children: [
                                     SizedBox(
                                       height:
@@ -85,17 +97,20 @@ class MassagesScreen extends StatelessWidget {
                                           0.7,
                                       child: Center(
                                         child: Text(
-                                          'Start conversation with ${cubit.users[cubit.chatItemIndex].name}',
-                                          style: TextStyle(color: Colors.grey),
+                                          'Start conversation with ${bloc.users[bloc.chatItemIndex].name}',
+                                          style: const TextStyle(
+                                            color: Colors.grey,
+                                          ),
                                         ),
                                       ),
                                     ),
                                   ],
                                 )
                               : ListView.separated(
-                                  physics: AlwaysScrollableScrollPhysics(),
+                                  physics:
+                                      const AlwaysScrollableScrollPhysics(),
                                   itemBuilder: (context, index) {
-                                    var massage = cubit.massages[index];
+                                    var massage = bloc.massages[index];
                                     bool showDateHeader = false;
                                     String dateHeader = '';
 
@@ -109,12 +124,10 @@ class MassagesScreen extends StatelessWidget {
                                           messageDate,
                                         );
                                       } else {
-                                        DateTime prevMessageDate =
-                                            DateTime.parse(
-                                              cubit
-                                                  .massages[index - 1]
-                                                  .massageDate!,
-                                            );
+                                        DateTime
+                                        prevMessageDate = DateTime.parse(
+                                          bloc.massages[index - 1].massageDate!,
+                                        );
                                         if (messageDate.year !=
                                                 prevMessageDate.year ||
                                             messageDate.month !=
@@ -130,7 +143,7 @@ class MassagesScreen extends StatelessWidget {
                                     }
 
                                     Widget messageWidget;
-                                    if (cubit.model!.uId ==
+                                    if (bloc.model!.uId ==
                                         massage.massageSenderId) {
                                       messageWidget = massageMyItemBuilder(
                                         massage,
@@ -161,7 +174,7 @@ class MassagesScreen extends StatelessWidget {
                                               ),
                                               child: Text(
                                                 dateHeader,
-                                                style: TextStyle(
+                                                style: const TextStyle(
                                                   color: Colors.black54,
                                                   fontSize: 12,
                                                   fontWeight: FontWeight.bold,
@@ -176,13 +189,13 @@ class MassagesScreen extends StatelessWidget {
                                     return messageWidget;
                                   },
                                   separatorBuilder: (context, index) =>
-                                      SizedBox(height: 20),
-                                  itemCount: cubit.massages.length,
+                                      const SizedBox(height: 20),
+                                  itemCount: bloc.massages.length,
                                 ),
                         ),
                       ),
                       fallback: (context) =>
-                          Center(child: CircularProgressIndicator()),
+                          const Center(child: CircularProgressIndicator()),
                     ),
                   ),
                   Padding(
@@ -196,22 +209,22 @@ class MassagesScreen extends StatelessWidget {
                       child: Row(
                         children: [
                           Expanded(
-                            child: cubit.isRecording
+                            child: bloc.isRecording
                                 ? Padding(
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 10,
                                     ),
                                     child: Row(
                                       children: [
-                                        Icon(
+                                        const Icon(
                                           Icons.fiber_manual_record,
                                           color: Colors.red,
                                           size: 15,
                                         ),
-                                        SizedBox(width: 5),
+                                        const SizedBox(width: 5),
                                         Text(
-                                          'Recording ${cubit.recordingDuration}s',
-                                          style: TextStyle(
+                                          'Recording ${bloc.recordingDuration}s',
+                                          style: const TextStyle(
                                             color: Colors.red,
                                             fontWeight: FontWeight.bold,
                                           ),
@@ -220,8 +233,8 @@ class MassagesScreen extends StatelessWidget {
                                     ),
                                   )
                                 : TextFormField(
-                                    controller: cubit.massageController,
-                                    decoration: InputDecoration(
+                                    controller: bloc.massageController,
+                                    decoration: const InputDecoration(
                                       border: InputBorder.none,
                                       hintText: 'Type a message',
                                     ),
@@ -229,27 +242,29 @@ class MassagesScreen extends StatelessWidget {
                           ),
                           Container(
                             height: 50,
-                            color: cubit.isRecording
+                            color: bloc.isRecording
                                 ? Colors.red
                                 : Colors.grey[600],
                             child: GestureDetector(
                               onTap: () {
-                                if (cubit.isRecording) {
-                                  cubit.stopRecording(
-                                    receiverId:
-                                        cubit.users[cubit.chatItemIndex].uId!,
+                                if (bloc.isRecording) {
+                                  bloc.add(
+                                    AppStopRecordingEvent(
+                                      bloc.users[bloc.chatItemIndex].uId!,
+                                    ),
                                   );
                                 } else {
-                                  cubit.startRecording();
+                                  bloc.add(AppStartRecordingEvent());
                                 }
                               },
                               onLongPress: () {
-                                cubit.startRecording();
+                                bloc.add(AppStartRecordingEvent());
                               },
                               onLongPressEnd: (details) {
-                                cubit.stopRecording(
-                                  receiverId:
-                                      cubit.users[cubit.chatItemIndex].uId!,
+                                bloc.add(
+                                  AppStopRecordingEvent(
+                                    bloc.users[bloc.chatItemIndex].uId!,
+                                  ),
                                 );
                               },
                               child: Padding(
@@ -257,7 +272,7 @@ class MassagesScreen extends StatelessWidget {
                                   horizontal: 10,
                                 ),
                                 child: Icon(
-                                  cubit.isRecording ? Icons.stop : Icons.mic,
+                                  bloc.isRecording ? Icons.stop : Icons.mic,
                                   color: Colors.white,
                                   size: 30,
                                 ),
@@ -269,15 +284,17 @@ class MassagesScreen extends StatelessWidget {
                             color: Colors.blueAccent[400],
                             child: MaterialButton(
                               onPressed: () {
-                                cubit.sendMassage(
-                                  massageReceiverId:
-                                      cubit.users[cubit.chatItemIndex].uId,
-                                  massageText: cubit.massageController.text,
+                                bloc.add(
+                                  AppSendMassageEvent(
+                                    massageReceiverId:
+                                        bloc.users[bloc.chatItemIndex].uId,
+                                    massageText: bloc.massageController.text,
+                                  ),
                                 );
-                                cubit.massageController.clear();
+                                bloc.massageController.clear();
                               },
                               minWidth: 1,
-                              child: Icon(
+                              child: const Icon(
                                 Icons.send,
                                 color: Colors.white,
                                 size: 30,
@@ -312,15 +329,15 @@ class MassagesScreen extends StatelessWidget {
     return Align(
       alignment: AlignmentDirectional.centerStart,
       child: Container(
-        decoration: BoxDecoration(
-          color: Colors.green[500],
+        decoration: const BoxDecoration(
+          color: Colors.green,
           borderRadius: BorderRadiusDirectional.only(
             bottomEnd: Radius.circular(10),
             topEnd: Radius.circular(10),
             topStart: Radius.circular(10),
           ),
         ),
-        padding: EdgeInsets.symmetric(vertical: 5, horizontal: 10),
+        padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
@@ -333,12 +350,12 @@ class MassagesScreen extends StatelessWidget {
             else
               Text(
                 '${massageModel!.massageText}',
-                style: TextStyle(color: Colors.white, fontSize: 16),
+                style: const TextStyle(color: Colors.white, fontSize: 16),
               ),
             if (formattedTime.isNotEmpty)
               Text(
                 formattedTime,
-                style: TextStyle(color: Colors.white70, fontSize: 10),
+                style: const TextStyle(color: Colors.white70, fontSize: 10),
               ),
           ],
         ),
@@ -363,13 +380,13 @@ class MassagesScreen extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           color: Colors.grey[400],
-          borderRadius: BorderRadiusDirectional.only(
+          borderRadius: const BorderRadiusDirectional.only(
             bottomStart: Radius.circular(10),
             topEnd: Radius.circular(10),
             topStart: Radius.circular(10),
           ),
         ),
-        padding: EdgeInsets.symmetric(vertical: 5, horizontal: 10),
+        padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.end,
           mainAxisSize: MainAxisSize.min,
@@ -382,12 +399,12 @@ class MassagesScreen extends StatelessWidget {
             else
               Text(
                 '${massageModel!.massageText}',
-                style: TextStyle(color: Colors.black, fontSize: 16),
+                style: const TextStyle(color: Colors.black, fontSize: 16),
               ),
             if (formattedTime.isNotEmpty)
               Text(
                 formattedTime,
-                style: TextStyle(color: Colors.black54, fontSize: 10),
+                style: const TextStyle(color: Colors.black54, fontSize: 10),
               ),
           ],
         ),

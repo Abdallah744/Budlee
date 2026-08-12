@@ -1,12 +1,11 @@
-// ignore_for_file: unused_local_variable
-
 import 'dart:io';
 
 import 'package:conditional_builder_null_safety/conditional_builder_null_safety.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../config/cubit/app_cubit/app_cubit.dart';
+import '../../../config/cubit/app_cubit/app_bloc.dart';
+import '../../../config/cubit/app_cubit/app_event.dart';
 import '../../../config/cubit/app_cubit/app_states.dart';
 import '../../../core/components/components.dart';
 import '../../../models/comments/comments_model.dart';
@@ -15,7 +14,7 @@ import '../../../models/posts/posts_model.dart';
 class CommentsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return BlocConsumer<AppCubit, AppState>(
+    return BlocConsumer<AppBloc, AppState>(
       listener: (context, state) {
         if (state is CreateCommentSuccessState) {
           showToast(
@@ -25,65 +24,64 @@ class CommentsScreen extends StatelessWidget {
         }
       },
       builder: (context, state) {
-        var cubit = AppCubit.get(context);
+        var bloc = AppBloc.get(context);
         return Scaffold(
           appBar: AppBar(),
-          body: cubit.model == null
-              ? Center(child: CircularProgressIndicator())
+          body: bloc.model == null
+              ? const Center(child: CircularProgressIndicator())
               : Column(
                   children: [
                     postItemBuilder(
-                      index: cubit.index,
-                      cubit.posts[cubit.index],
+                      index: bloc.index,
+                      bloc.posts[bloc.index],
                       context,
                       onTap: () {},
-                      userId: cubit.model!.uId.toString(),
+                      userId: bloc.model!.uId.toString(),
                       followingState: 'Follow',
-                      postModel: cubit.posts[cubit.index],
-                      profileImageUrl: cubit.posts[cubit.index].image
-                          ?.toString(),
+                      postModel: bloc.posts[bloc.index],
+                      profileImageUrl: bloc.posts[bloc.index].image?.toString(),
                     ),
                     Expanded(
                       child: SingleChildScrollView(
-                        physics: BouncingScrollPhysics(),
+                        physics: const BouncingScrollPhysics(),
                         child: ConditionalBuilder(
-                          condition: cubit.postComments.isNotEmpty,
+                          condition: bloc.postComments.isNotEmpty,
                           builder: (context) => ListView.separated(
                             itemBuilder: (context, index) => commentItemBuilder(
-                              cubit.postComments[index],
+                              bloc.postComments[index],
                               context,
                               index: index,
                             ),
                             separatorBuilder: (context, index) => myDivider(),
-                            itemCount: cubit.postComments.length,
+                            itemCount: bloc.postComments.length,
                             shrinkWrap: true,
-                            physics: NeverScrollableScrollPhysics(),
+                            physics: const NeverScrollableScrollPhysics(),
                           ),
                           fallback: (context) =>
-                              Center(child: CircularProgressIndicator()),
+                              const Center(child: CircularProgressIndicator()),
                         ),
                       ),
                     ),
-                    if (cubit.replyToComment != null)
+                    if (bloc.replyToComment != null)
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 10.0),
                         child: Row(
                           children: [
                             Text(
-                              'Replying to ${cubit.replyToComment!.userName}',
-                              style: TextStyle(
+                              'Replying to ${bloc.replyToComment!.userName}',
+                              style: const TextStyle(
                                 color: Colors.grey,
                                 fontSize: 12,
                               ),
                             ),
-                            Spacer(),
+                            const Spacer(),
                             IconButton(
                               onPressed: () {
-                                cubit.setReplyTo(null);
+                                bloc.add(AppSetReplyToEvent(null));
                               },
-                              icon: Icon(Icons.close, size: 16),
+                              icon: const Icon(Icons.close, size: 16),
                               padding: EdgeInsets.zero,
-                              constraints: BoxConstraints(),
+                              constraints: const BoxConstraints(),
                             ),
                           ],
                         ),
@@ -92,9 +90,9 @@ class CommentsScreen extends StatelessWidget {
                       children: [
                         Expanded(
                           child: TextFormField(
-                            controller: cubit.commentController,
+                            controller: bloc.commentController,
                             decoration: InputDecoration(
-                              hintText: cubit.replyToComment == null
+                              hintText: bloc.replyToComment == null
                                   ? 'Write a comment...'
                                   : 'Write a reply...',
                             ),
@@ -102,22 +100,26 @@ class CommentsScreen extends StatelessWidget {
                         ),
                         IconButton(
                           onPressed: () {
-                            if (cubit.replyToComment == null) {
-                              cubit.createComment(
-                                postId: cubit.posts[cubit.index].postId,
-                                commentText: cubit.commentController.text,
+                            if (bloc.replyToComment == null) {
+                              bloc.add(
+                                AppCreateCommentEvent(
+                                  postId: bloc.posts[bloc.index].postId,
+                                  commentText: bloc.commentController.text,
+                                ),
                               );
                             } else {
-                              cubit.createReply(
-                                postId: cubit.posts[cubit.index].postId!,
-                                commentId: cubit.replyToComment!.commentId!,
-                                replyText: cubit.commentController.text,
+                              bloc.add(
+                                AppCreateReplyEvent(
+                                  postId: bloc.posts[bloc.index].postId!,
+                                  commentId: bloc.replyToComment!.commentId!,
+                                  replyText: bloc.commentController.text,
+                                ),
                               );
-                              cubit.setReplyTo(null);
+                              bloc.add(AppSetReplyToEvent(null));
                             }
-                            cubit.commentController.clear();
+                            bloc.commentController.clear();
                           },
-                          icon: Icon(Icons.send),
+                          icon: const Icon(Icons.send),
                         ),
                       ],
                     ),
@@ -138,22 +140,10 @@ class CommentsScreen extends StatelessWidget {
     required String followingState,
     required Function onTap,
   }) {
-    // Determine the backgroundImage for the CircleAvatar
-    var cubit = AppCubit.get(context);
-    ImageProvider? commentUserImageProvider;
-    if (cubit.model != null) {
-      if (cubit.model!.profileImageFile != null &&
-          cubit.model!.profileImageFile!.existsSync()) {
-        commentUserImageProvider = FileImage(cubit.model!.profileImageFile!);
-      } else {
-        commentUserImageProvider = customImageProvider(cubit.model!.image);
-      }
-    }
-
     return Card(
       clipBehavior: Clip.antiAliasWithSaveLayer,
       elevation: 5,
-      margin: EdgeInsets.all(8.0),
+      margin: const EdgeInsets.all(8.0),
       child: Padding(
         padding: const EdgeInsets.all(10.0),
         child: Column(
@@ -170,7 +160,7 @@ class CommentsScreen extends StatelessWidget {
                       : null,
                   backgroundColor: Colors.grey[200],
                 ),
-                SizedBox(width: 15),
+                const SizedBox(width: 15),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -178,16 +168,15 @@ class CommentsScreen extends StatelessWidget {
                       Row(
                         children: [
                           Text(
-                            postModel?.name?.toString() ??
-                                'Unknown User', // Updated
-                            style: TextStyle(
+                            postModel?.name?.toString() ?? 'Unknown User',
+                            style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                               color: Colors.black,
                               height: 1.4,
                             ),
                           ),
-                          Icon(
+                          const Icon(
                             Icons.check_circle_sharp,
                             color: Colors.blue,
                             size: 18,
@@ -195,8 +184,8 @@ class CommentsScreen extends StatelessWidget {
                         ],
                       ),
                       Text(
-                        'Published At: ${postModel?.dateTime?.toString() ?? 'Unknown Date'}', // Updated
-                        style: TextStyle(
+                        'Published At: ${postModel?.dateTime?.toString() ?? 'Unknown Date'}',
+                        style: const TextStyle(
                           fontSize: 12,
                           color: Colors.grey,
                           height: 1.4,
@@ -205,18 +194,21 @@ class CommentsScreen extends StatelessWidget {
                     ],
                   ),
                 ),
-                if (postModel != null && userId != postModel.uId) // Updated
+                if (postModel != null && userId != postModel.uId)
                   InkWell(
                     onTap: () {},
                     child: Row(
                       children: [
-                        Icon(Icons.add, size: 20, color: Colors.blueAccent),
+                        const Icon(
+                          Icons.add,
+                          size: 20,
+                          color: Colors.blueAccent,
+                        ),
                         Text(
                           followingState,
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: Colors.blueAccent,
-                            fontSize:
-                                14, // Restored missing attribute from original context
+                            fontSize: 14,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -225,23 +217,27 @@ class CommentsScreen extends StatelessWidget {
                   ),
                 IconButton(
                   onPressed: () {},
-                  icon: Icon(Icons.more_vert, size: 20, color: Colors.black),
+                  icon: const Icon(
+                    Icons.more_vert,
+                    size: 20,
+                    color: Colors.black,
+                  ),
                 ),
               ],
             ),
-            SizedBox(height: 15),
+            const SizedBox(height: 15),
             myDivider(),
-            SizedBox(height: 15),
-            if (postModel?.text?.isNotEmpty == true) // Updated
+            const SizedBox(height: 15),
+            if (postModel?.text?.isNotEmpty == true)
               Text(
-                postModel!.text!, // Updated (safe due to isNotEmpty check)
-                style: TextStyle(
+                postModel!.text!,
+                style: const TextStyle(
                   fontSize: 14,
                   color: Colors.black,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
             if (postModel != null &&
                 postModel.postImage != null &&
                 postModel.postImage!.isNotEmpty)
@@ -260,28 +256,31 @@ class CommentsScreen extends StatelessWidget {
                     return Container(
                       height: 200,
                       color: Colors.grey[200],
-                      child: Icon(Icons.broken_image, color: Colors.grey),
+                      child: const Icon(Icons.broken_image, color: Colors.grey),
                     );
                   },
                 ),
               ),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
             Row(
               children: [
                 Text(
-                  '${postModel?.amountOfLikes ?? 0}', // Updated
-                  style: TextStyle(
+                  '${postModel?.amountOfLikes ?? 0}',
+                  style: const TextStyle(
                     fontSize: 12,
                     color: Colors.red,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                SizedBox(width: 10),
+                const SizedBox(width: 10),
                 InkWell(
                   onTap: () {
-                    cubit.changeLikeState(
-                      postId: postModel!.postId,
-                      userId: cubit.model!.uId,
+                    var bloc = AppBloc.get(context);
+                    bloc.add(
+                      AppChangeLikeStateEvent(
+                        postId: postModel!.postId,
+                        userId: bloc.model!.uId,
+                      ),
                     );
                   },
                   child: Icon(
@@ -294,17 +293,21 @@ class CommentsScreen extends StatelessWidget {
                         : Colors.grey,
                   ),
                 ),
-                Spacer(),
+                const Spacer(),
                 Text(
-                  '${postModel?.amountOfComments ?? 0}', // Updated
-                  style: TextStyle(
+                  '${postModel?.amountOfComments ?? 0}',
+                  style: const TextStyle(
                     fontSize: 12,
                     color: Colors.grey,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                SizedBox(width: 10),
-                Icon(Icons.mode_comment_outlined, size: 20, color: Colors.grey),
+                const SizedBox(width: 10),
+                const Icon(
+                  Icons.mode_comment_outlined,
+                  size: 20,
+                  color: Colors.grey,
+                ),
               ],
             ),
           ],
@@ -318,10 +321,10 @@ class CommentsScreen extends StatelessWidget {
     context, {
     required int index,
   }) {
-    var cubit = AppCubit.get(context);
-    comment = cubit.postComments[index];
+    var bloc = AppBloc.get(context);
+    comment = bloc.postComments[index];
     return Padding(
-      padding: EdgeInsets.all(10.0),
+      padding: const EdgeInsets.all(10.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -337,24 +340,24 @@ class CommentsScreen extends StatelessWidget {
                 : null,
             backgroundColor: Colors.grey[200],
           ),
-          SizedBox(width: 15),
+          const SizedBox(width: 15),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   comment.userName.toString(),
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: Colors.black,
                     height: 1.4,
                   ),
                 ),
-                SizedBox(height: 5),
+                const SizedBox(height: 5),
                 Text(
                   comment.commentText.toString(),
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 15,
                     color: Colors.black,
                     height: 1.4,
@@ -364,28 +367,33 @@ class CommentsScreen extends StatelessWidget {
                     comment.amountOfReplies! > 0)
                   InkWell(
                     onTap: () {
-                      cubit.getReplies(
-                        postId: comment.postId!,
-                        commentId: comment.commentId!,
+                      bloc.add(
+                        AppGetRepliesEvent(
+                          postId: comment.postId!,
+                          commentId: comment.commentId!,
+                        ),
                       );
                     },
                     child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 5.0),
                       child: Text(
                         'View ${comment.amountOfReplies} replies',
-                        style: TextStyle(color: Colors.grey, fontSize: 13),
+                        style: const TextStyle(
+                          color: Colors.grey,
+                          fontSize: 13,
+                        ),
                       ),
                     ),
                   ),
-                if (cubit.commentReplies[comment.commentId] != null)
+                if (bloc.commentReplies[comment.commentId] != null)
                   ListView.builder(
                     shrinkWrap: true,
-                    physics: NeverScrollableScrollPhysics(),
+                    physics: const NeverScrollableScrollPhysics(),
                     itemBuilder: (context, index) => replyItemBuilder(
-                      cubit.commentReplies[comment.commentId]![index],
+                      bloc.commentReplies[comment.commentId]![index],
                       context,
                     ),
-                    itemCount: cubit.commentReplies[comment.commentId]!.length,
+                    itemCount: bloc.commentReplies[comment.commentId]!.length,
                   ),
               ],
             ),
@@ -394,17 +402,17 @@ class CommentsScreen extends StatelessWidget {
             children: [
               IconButton(
                 onPressed: () {},
-                icon: Icon(Icons.thumb_up_alt_outlined, size: 18),
+                icon: const Icon(Icons.thumb_up_alt_outlined, size: 18),
                 padding: EdgeInsets.zero,
-                constraints: BoxConstraints(),
+                constraints: const BoxConstraints(),
               ),
               IconButton(
                 onPressed: () {
-                  cubit.setReplyTo(comment);
+                  bloc.add(AppSetReplyToEvent(comment));
                 },
-                icon: Icon(Icons.chat_bubble_outline, size: 18),
+                icon: const Icon(Icons.chat_bubble_outline, size: 18),
                 padding: EdgeInsets.zero,
-                constraints: BoxConstraints(),
+                constraints: const BoxConstraints(),
               ),
             ],
           ),
@@ -427,14 +435,14 @@ class CommentsScreen extends StatelessWidget {
                 : null,
             backgroundColor: Colors.grey[200],
           ),
-          SizedBox(width: 10),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   reply.userName.toString(),
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
                     color: Colors.black,
@@ -442,7 +450,7 @@ class CommentsScreen extends StatelessWidget {
                 ),
                 Text(
                   reply.commentText.toString(),
-                  style: TextStyle(fontSize: 13, color: Colors.black),
+                  style: const TextStyle(fontSize: 13, color: Colors.black),
                 ),
               ],
             ),

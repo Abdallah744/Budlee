@@ -1,36 +1,23 @@
+// ignore_for_file: unused_import
+
 import 'package:budlee_app/core/components/components.dart';
 import 'package:budlee_app/utils/shared/network/local/cash_helper.dart';
+import 'package:budlee_app/utils/shared/network/remote/dio_helper.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import 'config/cubit/app_cubit/app_cubit.dart';
-import 'config/cubit/bloc_observe.dart';
-import 'config/cubit/login/login_cubit.dart';
-import 'core/constants/constants.dart';
-import 'core/styles/themes.dart';
-import 'modules/splash_screen.dart';
+import 'package:budlee_app/config/cubit/app_cubit/app_bloc.dart';
+import 'package:budlee_app/config/cubit/app_cubit/app_event.dart';
+import 'package:budlee_app/config/cubit/bloc_observe.dart';
+import 'package:budlee_app/config/cubit/login/login_bloc.dart';
+import 'package:budlee_app/core/constants/constants.dart';
+import 'package:budlee_app/core/styles/themes.dart';
+import 'package:budlee_app/modules/splash_screen.dart';
 
-// Local Notifications Plugin
-final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
-    FlutterLocalNotificationsPlugin();
-
-// Android Notification Channel
-const AndroidNotificationChannel channel = AndroidNotificationChannel(
-  'high_importance_channel', // id
-  'High Importance Notifications', // title
-  description: 'This channel is used for important notifications.',
-  importance: Importance.max,
-);
-
-Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  await Firebase.initializeApp();
-  print("Handling a background message: ${message.messageId}");
-}
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -56,82 +43,7 @@ void main() async {
     publishableKey: 'sb_publishable_K6vHM1dGaos_G_W5lMkEzA_D7NGvS_4',
   );
 
-  // Initialize Local Notifications
-  const AndroidInitializationSettings initializationSettingsAndroid =
-      AndroidInitializationSettings('@mipmap/ic_launcher');
-  const DarwinInitializationSettings initializationSettingsIOS =
-      DarwinInitializationSettings();
-  const InitializationSettings initializationSettings = InitializationSettings(
-    android: initializationSettingsAndroid,
-    iOS: initializationSettingsIOS,
-  );
-
-  await flutterLocalNotificationsPlugin.initialize(
-    initializationSettings,
-    onDidReceiveNotificationResponse: (NotificationResponse response) {
-      // Handle notification tap here if needed
-      print('Notification tapped: ${response.payload}');
-    },
-  );
-
-  // Create Android Notification Channel
-  await flutterLocalNotificationsPlugin
-      .resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin
-      >()
-      ?.createNotificationChannel(channel);
-
-  // Request Notification Permissions
-  FirebaseMessaging messaging = FirebaseMessaging.instance;
-  await messaging.requestPermission(
-    alert: true,
-    announcement: false,
-    badge: true,
-    carPlay: false,
-    criticalAlert: false,
-    provisional: false,
-    sound: true,
-  );
-
-  // Handle Foreground Messages
-  FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-    bool isEnabled = CashHelper.get(key: 'isNotificationEnabled') ?? true;
-    if (isEnabled) {
-      RemoteNotification? notification = message.notification;
-      AndroidNotification? android = message.notification?.android;
-
-      if (notification != null && android != null && !kIsWeb) {
-        flutterLocalNotificationsPlugin.show(
-          notification.hashCode,
-          notification.title,
-          notification.body,
-          NotificationDetails(
-            android: AndroidNotificationDetails(
-              channel.id,
-              channel.name,
-              channelDescription: channel.description,
-              icon: android.smallIcon,
-            ),
-          ),
-          payload: message.data.toString(),
-        );
-      }
-    }
-  });
-
-  // Handle opening from Terminated/Background state
-  FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-    print('Message opened app: ${message.data}');
-    // You can navigate here based on message.data
-  });
-
-  RemoteMessage? initialMessage = await FirebaseMessaging.instance
-      .getInitialMessage();
-  if (initialMessage != null) {
-    print('Initial message: ${initialMessage.data}');
-  }
-
-  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+  DioHelper.init();
 
   Bloc.observer = MyBlocObserver();
   await CashHelper.init();
@@ -149,16 +61,17 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
-        BlocProvider(create: (context) => LoginCubit()),
+        BlocProvider(create: (context) => LoginBloc()),
         BlocProvider(
-          create: (context) => AppCubit()
-            ..getUserData(uId)
-            ..getPosts()
-            ..getUsers()
-            ..getFriends(),
+          create: (context) => AppBloc()
+            ..add(AppGetUserDataEvent(uId))
+            ..add(AppGetPostsEvent())
+            ..add(AppGetUsersEvent())
+            ..add(AppGetFriendsEvent()),
         ),
       ],
       child: MaterialApp(
+        navigatorKey: navigatorKey,
         debugShowCheckedModeBanner: false,
         theme: lightTheme,
         darkTheme: darkTheme,

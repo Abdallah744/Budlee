@@ -1,43 +1,41 @@
-// ignore_for_file: unused_import
-
-import 'dart:io'; // Added for FileImage
-
 import 'package:conditional_builder_null_safety/conditional_builder_null_safety.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../config/cubit/app_cubit/app_cubit.dart';
+import '../../../config/cubit/app_cubit/app_bloc.dart';
+import '../../../config/cubit/app_cubit/app_event.dart';
 import '../../../config/cubit/app_cubit/app_states.dart';
 import '../../../core/components/components.dart';
 import '../../../models/posts/posts_model.dart';
+import '../../../modules/screens/new_posts/new_posts.dart';
+import 'comments_screen.dart';
 
 class Feeds extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return BlocConsumer<AppCubit, AppState>(
+    return BlocConsumer<AppBloc, AppState>(
       listener: (context, state) {},
       builder: (context, state) {
-        var cubit = AppCubit.get(context);
-        // Determine the backgroundImage for the CircleAvatar
+        var bloc = AppBloc.get(context);
         ImageProvider? backgroundImage;
-        if (cubit.model != null) {
-          if (cubit.model!.profileImageFile != null) {
-            backgroundImage = FileImage(cubit.model!.profileImageFile!);
+        if (bloc.model != null) {
+          if (bloc.model!.profileImageFile != null) {
+            backgroundImage = FileImage(bloc.model!.profileImageFile!);
           } else {
-            backgroundImage = customImageProvider(cubit.model!.image);
+            backgroundImage = customImageProvider(bloc.model!.image);
           }
         }
 
         return SingleChildScrollView(
-          physics: BouncingScrollPhysics(),
+          physics: const BouncingScrollPhysics(),
           child: Column(
             children: [
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: InkWell(
                   onTap: () {
-                    cubit.moveBetweenPostsAndMainScreen(context);
+                    navigateTo(context, NewPosts());
                   },
                   child: Row(
                     children: [
@@ -49,10 +47,10 @@ class Feeds extends StatelessWidget {
                             : null,
                         backgroundColor: Colors.grey[200],
                         child: backgroundImage == null
-                            ? Icon(Icons.account_circle, size: 42)
+                            ? const Icon(Icons.account_circle, size: 42)
                             : null,
                       ),
-                      SizedBox(width: 15),
+                      const SizedBox(width: 15),
                       Expanded(
                         child: Text(
                           'Post Something...',
@@ -63,25 +61,23 @@ class Feeds extends StatelessWidget {
                           ),
                         ),
                       ),
-                      Icon(Icons.image, color: Colors.green),
-                      SizedBox(width: 5),
-                      Icon(Icons.video_call, color: Colors.red),
-                      SizedBox(width: 5),
-                      Icon(Icons.ondemand_video),
+                      const Icon(Icons.image, color: Colors.green),
+                      const SizedBox(width: 5),
+                      const Icon(Icons.video_call, color: Colors.red),
+                      const SizedBox(width: 5),
+                      const Icon(Icons.ondemand_video),
                     ],
                   ),
                 ),
               ),
-              SizedBox(height: 5),
+              const SizedBox(height: 5),
               InkWell(
-                onTap: () {
-                  // navigateTo(context, UsersNearby());
-                },
+                onTap: () {},
                 child: Card(
                   elevation: 10,
                   clipBehavior: Clip.antiAliasWithSaveLayer,
-                  margin: EdgeInsets.all(12.0),
-                  child: Stack(
+                  margin: const EdgeInsets.all(12.0),
+                  child: const Stack(
                     alignment: AlignmentDirectional.bottomEnd,
                     children: [
                       Image(
@@ -91,7 +87,7 @@ class Feeds extends StatelessWidget {
                         width: double.infinity,
                       ),
                       Padding(
-                        padding: const EdgeInsets.all(4.0),
+                        padding: EdgeInsets.all(4.0),
                         child: Text(
                           'Meet New Friends At Budlee',
                           style: TextStyle(
@@ -106,28 +102,29 @@ class Feeds extends StatelessWidget {
                 ),
               ),
               ConditionalBuilder(
-                condition: cubit.posts.isNotEmpty && cubit.model != null,
+                condition: bloc.posts.isNotEmpty && bloc.model != null,
                 builder: (context) => ListView.separated(
                   shrinkWrap: true,
-                  physics: NeverScrollableScrollPhysics(),
+                  physics: const NeverScrollableScrollPhysics(),
                   itemBuilder: (context, index) {
-                    final post = cubit.posts[index];
+                    final post = bloc.posts[index];
                     return postItemBuilder(
                       index: index,
                       post,
                       context,
                       onTap: () {},
-                      userId: cubit.model!.uId.toString(),
+                      userId: bloc.model!.uId.toString(),
                       followingState: 'Follow',
                       postModel: post,
                       profileImageUrl: post.image?.toString(),
                     );
                   },
-                  separatorBuilder: (context, index) => SizedBox(height: 8),
-                  itemCount: cubit.posts.length,
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(height: 8),
+                  itemCount: bloc.posts.length,
                 ),
                 fallback: (context) =>
-                    Center(child: CircularProgressIndicator()),
+                    const Center(child: CircularProgressIndicator()),
               ),
             ],
           ),
@@ -146,22 +143,21 @@ class Feeds extends StatelessWidget {
     required String followingState,
     required Function onTap,
   }) {
-    // Determine the backgroundImage for the CircleAvatar
-    var cubit = AppCubit.get(context);
+    var bloc = AppBloc.get(context);
     ImageProvider? commentUserImageProvider;
-    if (cubit.model != null) {
-      if (cubit.model!.profileImageFile != null &&
-          cubit.model!.profileImageFile!.existsSync()) {
-        commentUserImageProvider = FileImage(cubit.model!.profileImageFile!);
+    if (bloc.model != null) {
+      if (bloc.model!.profileImageFile != null &&
+          bloc.model!.profileImageFile!.existsSync()) {
+        commentUserImageProvider = FileImage(bloc.model!.profileImageFile!);
       } else {
-        commentUserImageProvider = customImageProvider(cubit.model!.image);
+        commentUserImageProvider = customImageProvider(bloc.model!.image);
       }
     }
 
     return Card(
       clipBehavior: Clip.antiAliasWithSaveLayer,
       elevation: 5,
-      margin: EdgeInsets.all(8.0),
+      margin: const EdgeInsets.all(8.0),
       child: Padding(
         padding: const EdgeInsets.all(10.0),
         child: Column(
@@ -174,28 +170,32 @@ class Feeds extends StatelessWidget {
                   backgroundImage: customImageProvider(profileImageUrl),
                   onBackgroundImageError:
                       customImageProvider(profileImageUrl) != null
-                          ? (exception, stackTrace) {}
-                          : null,
+                      ? (exception, stackTrace) {}
+                      : null,
                   backgroundColor: Colors.grey[200],
                 ),
-                SizedBox(width: 15),
+                const SizedBox(width: 15),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         children: [
-                          Text(
-                            postModel?.name?.toString() ??
-                                'Unknown User', // Updated
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black,
-                              height: 1.4,
+                          Flexible(
+                            child: Text(
+                              postModel?.name?.toString() ?? 'Unknown User',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black,
+                                height: 1.4,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          Icon(
+                          const SizedBox(width: 5),
+                          const Icon(
                             Icons.check_circle_sharp,
                             color: Colors.blue,
                             size: 18,
@@ -203,8 +203,8 @@ class Feeds extends StatelessWidget {
                         ],
                       ),
                       Text(
-                        'Published At: ${postModel?.dateTime?.toString() ?? 'Unknown Date'}', // Updated
-                        style: TextStyle(
+                        'Published At: ${postModel?.dateTime?.toString() ?? 'Unknown Date'}',
+                        style: const TextStyle(
                           fontSize: 12,
                           color: Colors.grey,
                           height: 1.4,
@@ -213,37 +213,37 @@ class Feeds extends StatelessWidget {
                     ],
                   ),
                 ),
-                if (postModel != null && userId != postModel.uId) // Updated
+                if (postModel != null && userId != postModel.uId)
                   InkWell(
                     onTap: () {
-                      if (!cubit.myFriends.any(
+                      if (!bloc.myFriends.any(
                         (element) => element.uId == postModel.uId,
                       )) {
-                        cubit.addFriend(postModel.uId);
+                        bloc.add(AppAddFriendEvent(postModel.uId));
                       }
                     },
                     child: Row(
                       children: [
-                        cubit.myFriends.any(
+                        bloc.myFriends.any(
                               (element) => element.uId == postModel.uId,
                             )
-                            ? Icon(
+                            ? const Icon(
                                 Icons.check_circle,
                                 size: 20,
                                 color: Colors.blueAccent,
                               )
-                            : Icon(
+                            : const Icon(
                                 Icons.add_circle_outline,
                                 size: 20,
                                 color: Colors.blueAccent,
                               ),
                         Text(
-                          cubit.myFriends.any(
+                          bloc.myFriends.any(
                                 (element) => element.uId == postModel.uId,
                               )
                               ? 'Friend'
                               : followingState,
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: Colors.blueAccent,
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
@@ -254,23 +254,27 @@ class Feeds extends StatelessWidget {
                   ),
                 IconButton(
                   onPressed: () {},
-                  icon: Icon(Icons.more_vert, size: 20, color: Colors.black),
+                  icon: const Icon(
+                    Icons.more_vert,
+                    size: 20,
+                    color: Colors.black,
+                  ),
                 ),
               ],
             ),
-            SizedBox(height: 15),
+            const SizedBox(height: 15),
             myDivider(),
-            SizedBox(height: 15),
-            if (postModel?.text?.isNotEmpty == true) // Updated
+            const SizedBox(height: 15),
+            if (postModel?.text?.isNotEmpty == true)
               Text(
-                postModel!.text!, // Updated (safe due to isNotEmpty check)
-                style: TextStyle(
+                postModel!.text!,
+                style: const TextStyle(
                   fontSize: 14,
                   color: Colors.black,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
             if (postModel != null &&
                 postModel.postImage != null &&
                 postModel.postImage!.isNotEmpty)
@@ -287,28 +291,30 @@ class Feeds extends StatelessWidget {
                     return Container(
                       height: 200,
                       color: Colors.grey[200],
-                      child: Icon(Icons.broken_image, color: Colors.grey),
+                      child: const Icon(Icons.broken_image, color: Colors.grey),
                     );
                   },
                 ),
               ),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
             Row(
               children: [
                 Text(
-                  '${postModel?.amountOfLikes ?? 0}', // Updated
-                  style: TextStyle(
+                  '${postModel?.amountOfLikes ?? 0}',
+                  style: const TextStyle(
                     fontSize: 12,
                     color: Colors.red,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                SizedBox(width: 10),
+                const SizedBox(width: 10),
                 InkWell(
                   onTap: () {
-                    cubit.changeLikeState(
-                      postId: postModel!.postId,
-                      userId: cubit.model!.uId,
+                    bloc.add(
+                      AppChangeLikeStateEvent(
+                        postId: postModel!.postId,
+                        userId: bloc.model!.uId,
+                      ),
                     );
                   },
                   child: Icon(
@@ -321,22 +327,26 @@ class Feeds extends StatelessWidget {
                         : Colors.grey,
                   ),
                 ),
-                Spacer(),
+                const Spacer(),
                 Text(
-                  '${postModel?.amountOfComments ?? 0}', // Updated
-                  style: TextStyle(
+                  '${postModel?.amountOfComments ?? 0}',
+                  style: const TextStyle(
                     fontSize: 12,
                     color: Colors.grey,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                SizedBox(width: 10),
-                Icon(Icons.mode_comment_outlined, size: 20, color: Colors.grey),
+                const SizedBox(width: 10),
+                const Icon(
+                  Icons.mode_comment_outlined,
+                  size: 20,
+                  color: Colors.grey,
+                ),
               ],
             ),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
             myDivider(),
-            SizedBox(height: 15),
+            const SizedBox(height: 15),
             Row(
               children: [
                 Expanded(
@@ -348,14 +358,14 @@ class Feeds extends StatelessWidget {
                           backgroundImage: commentUserImageProvider,
                           onBackgroundImageError:
                               commentUserImageProvider != null
-                                  ? (exception, stackTrace) {}
-                                  : null,
+                              ? (exception, stackTrace) {}
+                              : null,
                           backgroundColor: Colors.grey[200],
                           child: commentUserImageProvider == null
-                              ? Icon(Icons.account_circle, size: 42)
+                              ? const Icon(Icons.account_circle, size: 42)
                               : null,
                         ),
-                        SizedBox(width: 15),
+                        const SizedBox(width: 15),
                         Expanded(
                           child: Text(
                             'Write a comment...',
@@ -369,8 +379,10 @@ class Feeds extends StatelessWidget {
                       ],
                     ),
                     onTap: () {
-                      cubit.getPostComments(postModel!.postId.toString());
-                      cubit.toCommentScreen(context, index);
+                      bloc.add(
+                        AppGetPostCommentsEvent(postModel!.postId.toString()),
+                      );
+                      navigateTo(context, CommentsScreen());
                     },
                   ),
                 ),

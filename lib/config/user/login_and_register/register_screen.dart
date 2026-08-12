@@ -1,6 +1,7 @@
 // ignore_for_file: use_key_in_widget_constructors
 
-import 'package:budlee_app/config/cubit/register/register_cubit.dart';
+import 'package:budlee_app/config/cubit/register/register_bloc.dart';
+import 'package:budlee_app/config/cubit/register/register_event.dart';
 import 'package:budlee_app/config/cubit/register/register_states.dart';
 import 'package:budlee_app/config/user/login_and_register/login_screen.dart';
 import 'package:budlee_app/core/components/components.dart';
@@ -14,8 +15,8 @@ class RegisterScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (BuildContext context) => RegisterCubit(),
-      child: BlocConsumer<RegisterCubit, RegisterStates>(
+      create: (BuildContext context) => RegisterBloc(),
+      child: BlocConsumer<RegisterBloc, RegisterStates>(
         listener: (context, state) {
           if (state is CreateUserSuccessState) {
             showToast(
@@ -28,11 +29,11 @@ class RegisterScreen extends StatelessWidget {
           }
         },
         builder: (context, state) {
-          var cubit = RegisterCubit.get(context);
+          var bloc = RegisterBloc.get(context);
           return Scaffold(
             backgroundColor: Colors.purple[50],
             appBar: AppBar(
-              title: Text(
+              title: const Text(
                 'Register Page',
                 style: TextStyle(
                   fontSize: 20,
@@ -52,11 +53,11 @@ class RegisterScreen extends StatelessWidget {
                   bottom: 10.0,
                 ),
                 child: Form(
-                  key: cubit.registerFormKey,
+                  key: bloc.registerFormKey,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                      const Text(
                         'Create Account',
                         style: TextStyle(
                           fontSize: 26.0,
@@ -72,9 +73,9 @@ class RegisterScreen extends StatelessWidget {
                           color: Colors.grey[700],
                         ),
                       ),
-                      SizedBox(height: 40.0),
+                      const SizedBox(height: 40.0),
                       nameTextFormField(
-                        controller: cubit.nameController,
+                        controller: bloc.nameController,
                         type: TextInputType.emailAddress,
                         validate: (value) {
                           if (value!.isEmpty) {
@@ -87,9 +88,9 @@ class RegisterScreen extends StatelessWidget {
                         },
                         label: 'UserName',
                       ),
-                      SizedBox(height: 20.0),
+                      const SizedBox(height: 20.0),
                       emailTextFormField(
-                        controller: cubit.emailController,
+                        controller: bloc.emailController,
                         type: TextInputType.emailAddress,
                         validate: (value) {
                           if (value!.isEmpty) {
@@ -101,13 +102,13 @@ class RegisterScreen extends StatelessWidget {
                           }
                         },
                         label: 'Email Address',
-                        prefix: Icon(Icons.email_outlined),
+                        prefix: const Icon(Icons.email_outlined),
                       ),
-                      SizedBox(height: 20.0),
+                      const SizedBox(height: 20.0),
                       passwordTextFormField(
-                        controller: cubit.passwordController,
+                        controller: bloc.passwordController,
                         type: TextInputType.visiblePassword,
-                        isPassword: cubit.visibleOff,
+                        isPassword: bloc.visibleOff,
                         validate: (value) {
                           if (value!.isEmpty) {
                             return 'password must not be empty';
@@ -118,15 +119,15 @@ class RegisterScreen extends StatelessWidget {
                           }
                         },
                         label: 'Password',
-                        prefix: Icon(Icons.lock),
-                        suffix: cubit.redEyeIcon,
+                        prefix: const Icon(Icons.lock),
+                        suffix: bloc.redEyeIcon,
                         suffixPressed: () {
-                          cubit.changeVisibilityOne();
+                          bloc.add(RegisterChangeVisibilityOneEvent());
                         },
                       ),
-                      SizedBox(height: 20.0),
+                      const SizedBox(height: 20.0),
                       dateTextFormField(
-                        controller: cubit.birthdayController,
+                        controller: bloc.birthdayController,
                         type: TextInputType.number,
                         validate: (value) {
                           if (value!.isEmpty) {
@@ -136,22 +137,16 @@ class RegisterScreen extends StatelessWidget {
                           }
                         },
                         onTap: () {
-                          print(
-                            'Birthday field onTap triggered at: ${DateTime.now()}',
-                          ); // <-- ADD THIS LINE
                           // Defer the entire date picker interaction to the next event loop cycle.
                           Future(() async {
-                            // It's crucial to check if the widget is still in the tree (mounted)
-                            // before attempting to show a dialog or interact with the context.
                             if (!context.mounted) return;
 
                             final DateTime? pickedDate = await showDatePicker(
                               context: context,
-                              // Try to use the existing date in the text field as initial, otherwise default.
                               initialDate:
-                                  cubit.birthdayController.text.isNotEmpty
+                                  bloc.birthdayController.text.isNotEmpty
                                   ? (DateFormat.yMMMd().tryParse(
-                                          cubit.birthdayController.text,
+                                          bloc.birthdayController.text,
                                         ) ??
                                         DateTime(2000, 1, 1))
                                   : DateTime(2000, 1, 1),
@@ -159,43 +154,23 @@ class RegisterScreen extends StatelessWidget {
                               lastDate: DateTime.now(),
                             );
 
-                            // After showDatePicker returns (dialog is closed), check mounted status again
-                            // and if a date was actually picked.
                             if (!context.mounted || pickedDate == null) return;
 
-                            // Use WidgetsBinding.instance.addPostFrameCallback to schedule the state update
-                            // for after the current frame rendering is complete. This helps avoid conflicts
-                            // when the state update might trigger rebuilds during sensitive framework operations.
                             WidgetsBinding.instance.addPostFrameCallback((_) {
-                              // One final check for mounted status inside the post-frame callback.
                               if (context.mounted) {
-                                print(DateFormat.yMMMd().format(pickedDate));
-                                cubit.birthdayController.text =
+                                bloc.birthdayController.text =
                                     DateFormat.yMMMd()
                                         .format(pickedDate)
                                         .toString();
                               }
                             });
-                          }).catchError((error) {
-                            // Handle potential errors from the Future chain.
-                            // Check mounted status before interacting with context in error handling.
-                            if (context.mounted) {
-                              print(
-                                'Error during date picker interaction: ${error.toString()}',
-                              );
-                              // Optionally: showToast(text: 'Could not select date.', state: ToastStates.ERROR);
-                            } else {
-                              print(
-                                'Date picker error (context unmounted): ${error.toString()}',
-                              );
-                            }
                           });
                         },
                         label: 'birthday',
                       ),
-                      SizedBox(height: 20.0),
+                      const SizedBox(height: 20.0),
                       TextFormField(
-                        controller: cubit.phonController,
+                        controller: bloc.phonController,
                         keyboardType: TextInputType.phone,
                         validator: (value) {
                           if (value!.isEmpty) {
@@ -208,31 +183,26 @@ class RegisterScreen extends StatelessWidget {
                         },
                         decoration: InputDecoration(
                           labelText: 'Phone Number',
-                          prefixIcon: Icon(Icons.phone),
+                          prefixIcon: const Icon(Icons.phone),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(textFormRadius),
                           ),
                         ),
-                        onChanged: (value) {
-                          if (value.length < 11 || value.length > 11) {
-                            print('Phone number is valid');
-                          }
-                        },
                       ),
-                      SizedBox(height: 20.0),
+                      const SizedBox(height: 20.0),
                       Row(
                         children: [
                           Checkbox(
-                            value: cubit.rightsChecked,
+                            value: bloc.rightsChecked,
                             onChanged: (value) {
-                              cubit.changeRightsChecked();
+                              bloc.add(RegisterChangeRightsCheckedEvent());
                             },
-                            visualDensity: VisualDensity(
+                            visualDensity: const VisualDensity(
                               horizontal: -4,
                               vertical: -4,
                             ),
                           ),
-                          Text(
+                          const Text(
                             'I Totally have the right to use my personal data \n for the purpose of this app.',
                             style: TextStyle(
                               fontSize: 13,
@@ -241,20 +211,20 @@ class RegisterScreen extends StatelessWidget {
                           ),
                         ],
                       ),
-                      SizedBox(height: 20.0),
+                      const SizedBox(height: 20.0),
                       Row(
                         children: [
                           Checkbox(
-                            value: cubit.termsChecked,
+                            value: bloc.termsChecked,
                             onChanged: (value) {
-                              cubit.changeTermsChecked();
+                              bloc.add(RegisterChangeTermsCheckedEvent());
                             },
-                            visualDensity: VisualDensity(
+                            visualDensity: const VisualDensity(
                               horizontal: -4,
                               vertical: -4,
                             ),
                           ),
-                          Text(
+                          const Text(
                             'I read and accept the terms and conditions \n to use this app.',
                             style: TextStyle(
                               fontSize: 13,
@@ -263,19 +233,19 @@ class RegisterScreen extends StatelessWidget {
                           ),
                         ],
                       ),
-                      SizedBox(height: 30.0),
+                      const SizedBox(height: 30.0),
                       defaultButton(
                         function: () {
-                          if (cubit.registerFormKey.currentState!.validate() &&
-                              cubit.rightsChecked &&
-                              cubit.termsChecked) {
-                            cubit.userRegister(
-                              email: cubit.emailController.text,
-                              password: cubit.passwordController.text,
-                              name: cubit.nameController.text,
-                              phone: cubit.phonController.text,
-                              birthday: cubit.birthdayController.text,
-                            );
+                          if (bloc.registerFormKey.currentState!.validate() &&
+                              bloc.rightsChecked &&
+                              bloc.termsChecked) {
+                            bloc.add(UserRegisterEvent(
+                              email: bloc.emailController.text,
+                              password: bloc.passwordController.text,
+                              name: bloc.nameController.text,
+                              phone: bloc.phonController.text,
+                              birthday: bloc.birthdayController.text,
+                            ));
                           } else {
                             showToast(
                               text: 'Please check the terms and conditions',
@@ -286,7 +256,7 @@ class RegisterScreen extends StatelessWidget {
                         background: secondaryColor,
                         text: 'Create Account',
                       ),
-                      SizedBox(height: 20.0),
+                      const SizedBox(height: 20.0),
                       Center(
                         child: Text(
                           'OR REGISTER WITH',
@@ -297,15 +267,15 @@ class RegisterScreen extends StatelessWidget {
                           ),
                         ),
                       ),
-                      SizedBox(height: 20.0),
+                      const SizedBox(height: 20.0),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           InkWell(
                             onTap: () {
-                              cubit.registerWithGoogle();
+                              bloc.add(RegisterWithGoogleEvent());
                             },
-                            child: CircleAvatar(
+                            child: const CircleAvatar(
                               radius: 25,
                               backgroundColor: Colors.white,
                               child: Image(
@@ -317,10 +287,10 @@ class RegisterScreen extends StatelessWidget {
                               ),
                             ),
                           ),
-                          SizedBox(width: 20),
+                          const SizedBox(width: 20),
                           InkWell(
                             onTap: () {
-                              cubit.registerWithFacebook();
+                              bloc.add(RegisterWithFacebookEvent());
                             },
                             child: CircleAvatar(
                               radius: 25,
@@ -334,7 +304,7 @@ class RegisterScreen extends StatelessWidget {
                           ),
                         ],
                       ),
-                      SizedBox(height: 20.0),
+                      const SizedBox(height: 20.0),
                     ],
                   ),
                 ),

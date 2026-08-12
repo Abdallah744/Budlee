@@ -1,10 +1,11 @@
 import 'dart:io';
 
+import 'package:budlee_app/config/cubit/app_cubit/app_event.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../config/cubit/app_cubit/app_cubit.dart';
+import '../../../config/cubit/app_cubit/app_bloc.dart';
 import '../../../config/cubit/app_cubit/app_states.dart';
 import '../../../config/user/login_and_register/login_screen.dart';
 import '../../../config/user/profile/edit_profile_screen.dart';
@@ -13,7 +14,7 @@ import '../../../core/components/components.dart';
 class SettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return BlocConsumer<AppCubit, AppState>(
+    return BlocConsumer<AppBloc, AppState>(
       listener: (context, state) {
         if (state is UploadToGalleryErrorState) {
           showToast(text: state.error, state: ToastStates.ERROR);
@@ -26,12 +27,12 @@ class SettingsScreen extends StatelessWidget {
         }
       },
       builder: (context, state) {
-        var cubit = AppCubit.get(context);
-        var model = cubit.model;
+        var bloc = AppBloc.get(context);
+        var model = bloc.model;
         if (model == null) {
           final user = FirebaseAuth.instance.currentUser;
           if (user != null && state is! GetUserDataLoadingState) {
-            cubit.getUserData(user.uid);
+            bloc.add(AppGetUserDataEvent(user.uid));
           }
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
@@ -43,7 +44,7 @@ class SettingsScreen extends StatelessWidget {
             centerTitle: true,
             title: Text(
               '${model.name}\'s Profile Settings',
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
                 color: Colors.black,
@@ -52,7 +53,7 @@ class SettingsScreen extends StatelessWidget {
             actions: [
               IconButton(
                 onPressed: () {
-                  cubit.logOut();
+                  bloc.add(AppLogOutEvent());
                   navigateToAndFinish(context, Login());
                 },
                 icon: Icon(Icons.logout_sharp, color: Colors.red[700]),
@@ -131,7 +132,7 @@ class SettingsScreen extends StatelessWidget {
                         child: Column(
                           children: [
                             Text(
-                              '${cubit.myPostsCalculation()}',
+                              '${bloc.myPostsCalculation()}',
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.bold,
@@ -181,7 +182,7 @@ class SettingsScreen extends StatelessWidget {
                         child: Column(
                           children: [
                             Text(
-                              '${cubit.amountOfFollowers}',
+                              '${bloc.amountOfFollowers}',
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.bold,
@@ -206,7 +207,7 @@ class SettingsScreen extends StatelessWidget {
                         child: Column(
                           children: [
                             Text(
-                              '${cubit.amountOfFollowing}',
+                              '${bloc.amountOfFollowing}',
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.bold,
@@ -228,41 +229,12 @@ class SettingsScreen extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 15),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(10),
-                    color: Colors.grey[200],
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.notifications_active, color: Colors.blue),
-                      const SizedBox(width: 15),
-                      const Text(
-                        'Notifications',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const Spacer(),
-                      Switch(
-                        value: cubit.isNotificationEnabled,
-                        onChanged: (value) {
-                          cubit.toggleNotification(value);
-                        },
-                        activeColor: Colors.blue,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 15),
                 Row(
                   children: [
                     Expanded(
                       child: OutlinedButton(
                         onPressed: () {
-                          cubit.uploadGalleryImage();
+                          bloc.add(AppUploadGalleryImageEvent());
                         },
                         child: const Text(
                           'Add To Gallery',

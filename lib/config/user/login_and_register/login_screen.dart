@@ -6,7 +6,8 @@ import 'package:conditional_builder_null_safety/conditional_builder_null_safety.
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../config/cubit/login/login_cubit.dart';
+import '../../../config/cubit/login/login_bloc.dart';
+import '../../../config/cubit/login/login_event.dart';
 import '../../../config/cubit/login/login_states.dart';
 import '../../../core/styles/colors.dart';
 import '../../../modules/layouts/home_layout/home_page.dart';
@@ -14,7 +15,7 @@ import '../../../modules/layouts/home_layout/home_page.dart';
 class Login extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return BlocConsumer<LoginCubit, LoginStates>(
+    return BlocConsumer<LoginBloc, LoginStates>(
       listener: (context, state) {
         if (state is LoginSuccessAppState) {
           showToast(text: 'Login Successfully', state: ToastStates.SUCCESS);
@@ -24,11 +25,11 @@ class Login extends StatelessWidget {
         }
       },
       builder: (context, state) {
-        var cubit = LoginCubit.get(context);
+        var bloc = LoginBloc.get(context);
         return Scaffold(
           backgroundColor: Colors.purple[50],
           appBar: AppBar(
-            title: Text(
+            title: const Text(
               'Easy Chat ;)',
               style: TextStyle(
                 color: Colors.blue,
@@ -40,14 +41,14 @@ class Login extends StatelessWidget {
             elevation: 0,
           ),
           body: Form(
-            key: cubit.formKey,
+            key: bloc.formKey,
             child: SingleChildScrollView(
               child: Padding(
                 padding: const EdgeInsets.all(20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    SizedBox(height: 80),
+                    const SizedBox(height: 80),
                     Text(
                       'Login',
                       style: TextStyle(
@@ -64,9 +65,9 @@ class Login extends StatelessWidget {
                         color: Colors.grey[700],
                       ),
                     ),
-                    SizedBox(height: 35),
+                    const SizedBox(height: 35),
                     emailTextFormField(
-                      controller: cubit.emailController,
+                      controller: bloc.emailController,
                       type: TextInputType.emailAddress,
                       validate: (value) {
                         if (value!.isEmpty) {
@@ -78,13 +79,13 @@ class Login extends StatelessWidget {
                         }
                       },
                       label: 'Email Address',
-                      prefix: Icon(Icons.email),
+                      prefix: const Icon(Icons.email),
                     ),
-                    SizedBox(height: 15),
+                    const SizedBox(height: 15),
                     passwordTextFormField(
-                      controller: cubit.passwordController,
+                      controller: bloc.passwordController,
                       type: TextInputType.visiblePassword,
-                      isPassword: cubit.visibleOff,
+                      isPassword: bloc.visibleOff,
                       validate: (value) {
                         if (value!.isEmpty) {
                           return 'password must not be empty';
@@ -95,28 +96,28 @@ class Login extends StatelessWidget {
                         }
                       },
                       label: 'Password',
-                      prefix: Icon(Icons.lock),
+                      prefix: const Icon(Icons.lock),
                       suffixPressed: () {
-                        cubit.changeVisibilityOne();
+                        bloc.add(LoginChangeVisibilityOneEvent());
                       },
-                      suffix: cubit.redEyeIcon,
+                      suffix: bloc.redEyeIcon,
                     ),
-                    SizedBox(height: 15),
+                    const SizedBox(height: 15),
                     Row(
                       children: [
                         Checkbox(
-                          value: cubit.checked,
+                          value: bloc.checked,
                           activeColor: Colors.blueAccent,
                           onChanged: (value) {
-                            cubit.changeChecked();
+                            bloc.add(LoginChangeCheckedEvent());
                           },
                         ),
-                        Text('Remember Me', style: TextStyle(fontSize: 16.0)),
+                        const Text('Remember Me', style: TextStyle(fontSize: 16.0)),
                       ],
                     ),
                     Row(
                       children: [
-                        Text(
+                        const Text(
                           'Forgot Password?',
                           style: TextStyle(fontSize: 16.0),
                         ),
@@ -132,17 +133,17 @@ class Login extends StatelessWidget {
                         ),
                       ],
                     ),
-                    SizedBox(height: 10.0),
+                    const SizedBox(height: 10.0),
                     ConditionalBuilder(
                       condition: state is! LoginLoadingAppState,
                       builder: (context) => defaultButton(
                         function: () {
-                          if (cubit.formKey.currentState!.validate() &&
-                              cubit.checked) {
-                            cubit.userLogin(
-                              cubit.emailController.text,
-                              cubit.passwordController.text,
-                            );
+                          if (bloc.formKey.currentState!.validate() &&
+                              bloc.checked) {
+                            bloc.add(UserLoginEvent(
+                              email: bloc.emailController.text,
+                              password: bloc.passwordController.text,
+                            ));
                           }
                         },
                         text: 'Login',
@@ -150,13 +151,13 @@ class Login extends StatelessWidget {
                         radius: 25,
                       ),
                       fallback: (context) =>
-                          Center(child: CircularProgressIndicator()),
+                          const Center(child: CircularProgressIndicator()),
                     ),
 
-                    SizedBox(height: 10.0),
+                    const SizedBox(height: 10.0),
                     Row(
                       children: [
-                        Text(
+                        const Text(
                           'Don\'t have an account?',
                           style: TextStyle(fontSize: 16.0),
                         ),
@@ -174,7 +175,7 @@ class Login extends StatelessWidget {
                         ),
                       ],
                     ),
-                    SizedBox(height: 20.0),
+                    const SizedBox(height: 20.0),
                     Center(
                       child: Text(
                         'OR LOGIN WITH',
@@ -185,15 +186,15 @@ class Login extends StatelessWidget {
                         ),
                       ),
                     ),
-                    SizedBox(height: 20.0),
+                    const SizedBox(height: 20.0),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         InkWell(
                           onTap: () {
-                            cubit.loginWithGoogle();
+                            bloc.add(LoginWithGoogleEvent());
                           },
-                          child: CircleAvatar(
+                          child: const CircleAvatar(
                             radius: 25,
                             backgroundColor: Colors.white,
                             child: Image(
@@ -205,10 +206,10 @@ class Login extends StatelessWidget {
                             ),
                           ),
                         ),
-                        SizedBox(width: 20),
+                        const SizedBox(width: 20),
                         InkWell(
                           onTap: () {
-                            cubit.loginWithFacebook();
+                            bloc.add(LoginWithFacebookEvent());
                           },
                           child: CircleAvatar(
                             radius: 25,

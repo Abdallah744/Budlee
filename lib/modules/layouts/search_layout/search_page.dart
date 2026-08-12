@@ -1,4 +1,5 @@
-import 'package:budlee_app/config/cubit/app_cubit/app_cubit.dart';
+import 'package:budlee_app/config/cubit/app_cubit/app_bloc.dart';
+import 'package:budlee_app/config/cubit/app_cubit/app_event.dart';
 import 'package:budlee_app/config/cubit/app_cubit/app_states.dart';
 import 'package:budlee_app/core/components/components.dart';
 import 'package:budlee_app/models/users/user_model.dart';
@@ -17,24 +18,24 @@ class _SearchPageState extends State<SearchPage> {
     super.initState();
     // Initialize search results when the page opens
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      AppCubit.get(context).getUsers();
-      AppCubit.get(context).search('');
+      AppBloc.get(context).add(AppGetUsersEvent());
+      AppBloc.get(context).add(AppSearchEvent(''));
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    return BlocConsumer<AppCubit, AppState>(
+    return BlocConsumer<AppBloc, AppState>(
       listener: (context, state) {
         if (state is GetAllUsersSuccessState) {
-          AppCubit.get(context).search('');
+          AppBloc.get(context).add(AppSearchEvent(''));
         }
       },
       builder: (context, state) {
-        var cubit = AppCubit.get(context);
+        var bloc = AppBloc.get(context);
 
         return Scaffold(
-          appBar: AppBar(title: Text('Search Users')),
+          appBar: AppBar(title: const Text('Search Users')),
           body: Padding(
             padding: const EdgeInsets.all(20.0),
             child: Column(
@@ -44,7 +45,7 @@ class _SearchPageState extends State<SearchPage> {
                     if (textEditingValue.text == '') {
                       return const Iterable<userModel>.empty();
                     }
-                    return cubit.users.where((userModel option) {
+                    return bloc.users.where((userModel option) {
                       return option.name!.toLowerCase().contains(
                         textEditingValue.text.toLowerCase(),
                       );
@@ -64,16 +65,16 @@ class _SearchPageState extends State<SearchPage> {
                         return TextFormField(
                           controller: textEditingController,
                           focusNode: focusNode,
-                          decoration: InputDecoration(
+                          decoration: const InputDecoration(
                             labelText: 'Search',
                             prefixIcon: Icon(Icons.search),
                             border: OutlineInputBorder(),
                           ),
                           onChanged: (value) {
-                            cubit.search(value);
+                            bloc.add(AppSearchEvent(value));
                           },
                           onFieldSubmitted: (value) {
-                            cubit.search(value);
+                            bloc.add(AppSearchEvent(value));
                           },
                         );
                       },
@@ -82,10 +83,10 @@ class _SearchPageState extends State<SearchPage> {
                       alignment: Alignment.topLeft,
                       child: Material(
                         elevation: 4.0,
-                        child: Container(
+                        child: SizedBox(
                           width: MediaQuery.of(context).size.width - 40,
                           child: ListView.builder(
-                            padding: EdgeInsets.all(8.0),
+                            padding: const EdgeInsets.all(8.0),
                             shrinkWrap: true,
                             itemCount: options.length,
                             itemBuilder: (BuildContext context, int index) {
@@ -116,17 +117,17 @@ class _SearchPageState extends State<SearchPage> {
                     );
                   },
                 ),
-                SizedBox(height: 20),
+                const SizedBox(height: 20),
                 Expanded(
                   child: ListView.separated(
-                    physics: BouncingScrollPhysics(),
+                    physics: const BouncingScrollPhysics(),
                     itemBuilder: (context, index) => buildSearchItem(
-                      cubit.searchResult[index],
+                      bloc.searchResult[index],
                       context,
-                      cubit,
+                      bloc,
                     ),
                     separatorBuilder: (context, index) => myDivider2(),
-                    itemCount: cubit.searchResult.length,
+                    itemCount: bloc.searchResult.length,
                   ),
                 ),
               ],
@@ -137,7 +138,7 @@ class _SearchPageState extends State<SearchPage> {
     );
   }
 
-  Widget buildSearchItem(userModel model, context, AppCubit cubit) => InkWell(
+  Widget buildSearchItem(userModel model, context, AppBloc bloc) => InkWell(
     onTap: () {
       navigateTo(context, FriendProfile(friendModel: model));
     },
@@ -153,21 +154,21 @@ class _SearchPageState extends State<SearchPage> {
                 : null,
             backgroundColor: Colors.grey[200],
           ),
-          SizedBox(width: 20),
+          const SizedBox(width: 20),
           Text(
             '${model.name}',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
-          Spacer(),
-          if (!cubit.myFriends.any((element) => element.uId == model.uId))
+          const Spacer(),
+          if (!bloc.myFriends.any((element) => element.uId == model.uId))
             IconButton(
               onPressed: () {
-                cubit.addFriend(model.uId);
+                bloc.add(AppAddFriendEvent(model.uId));
               },
-              icon: Icon(Icons.person_add, color: Colors.blue),
+              icon: const Icon(Icons.person_add, color: Colors.blue),
             )
           else
-            Icon(Icons.check_circle, color: Colors.green),
+            const Icon(Icons.check_circle, color: Colors.green),
         ],
       ),
     ),

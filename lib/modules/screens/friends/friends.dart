@@ -1,7 +1,7 @@
 // ignore: unused_import
 import 'dart:io';
 
-import 'package:budlee_app/config/cubit/app_cubit/app_cubit.dart';
+import 'package:budlee_app/config/cubit/app_cubit/app_bloc.dart';
 import 'package:budlee_app/config/cubit/app_cubit/app_states.dart';
 import 'package:budlee_app/core/components/components.dart';
 import 'package:conditional_builder_null_safety/conditional_builder_null_safety.dart';
@@ -14,21 +14,21 @@ import 'friend_profile.dart';
 class Friends extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return BlocConsumer<AppCubit, AppState>(
+    return BlocConsumer<AppBloc, AppState>(
       listener: (context, state) {},
       builder: (context, state) {
-        var cubit = AppCubit.get(context);
+        var bloc = AppBloc.get(context);
         return Scaffold(
           body: ConditionalBuilder(
-            condition: cubit.myFriends.isNotEmpty,
+            condition: bloc.myFriends.isNotEmpty,
             builder: (context) => ListView.separated(
-              physics: BouncingScrollPhysics(),
+              physics: const BouncingScrollPhysics(),
               itemBuilder: (context, index) =>
-                  friendsItemBuilder(context, index),
+                  friendsItemBuilder(context, index, bloc),
               separatorBuilder: (context, index) => myDivider2(),
-              itemCount: cubit.myFriends.length,
+              itemCount: bloc.myFriends.length,
             ),
-            fallback: (context) => Center(
+            fallback: (context) => const Center(
               child: Text(
                 'You have no friends yet!',
                 style: TextStyle(
@@ -44,11 +44,10 @@ class Friends extends StatelessWidget {
     );
   }
 
-  Widget friendsItemBuilder(context, index) {
-    var cubit = AppCubit.get(context);
+  Widget friendsItemBuilder(context, index, AppBloc bloc) {
     return InkWell(
       onTap: () {
-        navigateTo(context, FriendProfile(friendModel: cubit.myFriends[index]));
+        navigateTo(context, FriendProfile(friendModel: bloc.myFriends[index]));
       },
       child: Padding(
         padding: const EdgeInsets.all(8.0),
@@ -57,23 +56,27 @@ class Friends extends StatelessWidget {
             CircleAvatar(
               radius: 31,
               backgroundImage:
-                  (cubit.myFriends[index].profileImageFile != null &&
-                      cubit.myFriends[index].profileImageFile!.existsSync())
-                  ? FileImage(cubit.myFriends[index].profileImageFile!)
-                  : customImageProvider(cubit.myFriends[index].image),
+                  (bloc.myFriends[index].profileImageFile != null &&
+                      bloc.myFriends[index].profileImageFile!.existsSync())
+                  ? FileImage(bloc.myFriends[index].profileImageFile!)
+                  : customImageProvider(bloc.myFriends[index].image),
             ),
-            SizedBox(width: 20),
-            Text(
-              '${cubit.myFriends[index].name}',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            const SizedBox(width: 20),
+            Expanded(
+              child: Text(
+                '${bloc.myFriends[index].name}',
+                style:
+                    const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
-            Spacer(),
             IconButton(
               onPressed: () {
-                cubit.chatItemIndex = index;
+                bloc.chatItemIndex = index;
                 navigateTo(context, MassagesScreen());
               },
-              icon: Icon(Icons.message),
+              icon: const Icon(Icons.message),
             ),
           ],
         ),
